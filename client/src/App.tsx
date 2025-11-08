@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
+import MasterData from "@/pages/MasterData";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/master-data" component={MasterData} />
       <Route component={NotFound} />
     </Switch>
   );
