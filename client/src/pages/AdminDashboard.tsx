@@ -18,17 +18,17 @@ import { Plus } from "lucide-react";
 import type { Patient as BackendPatient, NursingNote as BackendNursingNote, Staff } from "@shared/schema";
 
 export default function AdminDashboard() {
-  const { admin } = useAuth();
+  const { admin, isLoading } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (only after loading completes)
   useEffect(() => {
-    if (!admin) {
+    if (!isLoading && !admin) {
       setLocation('/login');
     }
-  }, [admin, setLocation]);
+  }, [admin, isLoading, setLocation]);
 
   // Redirect to master data page when master tab is clicked
   useEffect(() => {

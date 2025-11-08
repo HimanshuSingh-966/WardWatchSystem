@@ -19,16 +19,16 @@ import type { Medication, Procedure, Investigation, Staff, Department } from "@s
 
 export default function MasterData() {
   const { toast } = useToast();
-  const { admin } = useAuth();
+  const { admin, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("medications");
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (only after loading completes)
   useEffect(() => {
-    if (!admin) {
+    if (!isLoading && !admin) {
       setLocation('/login');
     }
-  }, [admin, setLocation]);
+  }, [admin, isLoading, setLocation]);
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [showProcedureModal, setShowProcedureModal] = useState(false);
   const [showInvestigationModal, setShowInvestigationModal] = useState(false);

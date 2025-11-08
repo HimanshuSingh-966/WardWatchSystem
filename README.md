@@ -96,25 +96,61 @@ npm run dev
 
 The application will be available at `http://localhost:5000` (or your Replit URL)
 
-## Default Admin Account
+## Creating Your First Admin Account
 
-After setting up the database, create an admin account by running this SQL in Supabase SQL Editor:
+After setting up the database, you need to create your first admin account. You can do this by making an API request to the registration endpoint:
+
+### Option 1: Using curl (Terminal/Command Line)
+
+```bash
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "your-secure-password",
+    "full_name": "System Administrator",
+    "email": "admin@hospital.com"
+  }'
+```
+
+### Option 2: Using a REST client (Postman, Insomnia, etc.)
+
+**Endpoint:** `POST /api/auth/register`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "username": "admin",
+  "password": "your-secure-password",
+  "full_name": "System Administrator",
+  "email": "admin@hospital.com"
+}
+```
+
+### Option 3: Directly in Supabase SQL Editor
+
+If you prefer to create the admin account directly in the database:
 
 ```sql
-INSERT INTO admins (email, password_hash, full_name, role)
+-- Replace 'your-hashed-password' with a properly hashed password
+-- You can generate a bcrypt hash at: https://bcrypt-generator.com/
+INSERT INTO admins (username, email, password_hash, full_name, role, is_active)
 VALUES (
-  'admin@wardwatch.com',
-  '$2b$10$rN3qLJ5zJ5qF7J5qF7J5qO.qF7J5qF7J5qF7J5qF7J5qF7J5qF7J5q',
+  'admin',
+  'admin@hospital.com',
+  '$2b$10$your-bcrypt-hashed-password-here',
   'System Administrator',
-  'admin'
+  'admin',
+  true
 );
 ```
 
-**Login credentials:**
-- Email: `admin@wardwatch.com`
-- Password: `admin123`
-
-**⚠️ Important:** Change this password after first login!
+**Note:** For security, use a strong password and never commit credentials to version control.
 
 ## Project Structure
 
