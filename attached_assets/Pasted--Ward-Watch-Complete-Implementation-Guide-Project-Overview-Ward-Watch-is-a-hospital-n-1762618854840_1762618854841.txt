@@ -1,0 +1,459 @@
+# Ward Watch - Complete Implementation Guide
+
+## 🎯 Project Overview
+
+Ward Watch is a hospital nursing management system with the following core requirements:
+
+### Key Changes from Original System
+1. **Nursing Notes** - Replace all logs with flexible nursing notes for any observations
+2. **Single Admin Dashboard** - Only admins can view and edit all records
+3. **Remove Schedules** - No separate schedule management
+4. **Hero Landing Page** - Public-facing page similar to nurselog.netlify.app
+5. **Unified Treatment Views** - Show medications, procedures, and investigations together by time
+6. **Time-grouped Display** - Multiple treatments at same time show in single row
+7. **Real-time Notifications** - Popup alerts like train station boards
+8. **Treatment History** - Complete historical record of all patient treatments
+9. **Discharge Workflow** - Replace patient status with discharge functionality
+10. **Staff Assignments** - Multiple doctors and nurses per patient
+11. **Inline Editing** - Edit any record directly in tables with checkboxes
+
+---
+
+## 📊 Database Structure Overview
+
+### Core Entities
+- **admins** - Separate authentication table for admin users only
+- **staff** - Doctors and nurses (reference data, no authentication)
+- **departments** - Hospital departments
+- **patients** - Patient records with discharge status
+- **patient_staff_assignments** - Many-to-many for doctors/nurses assigned to patients
+
+### Master Data
+- **medications** - Medication catalog
+- **procedures** - Procedure catalog
+- **investigations** - Investigation catalog
+- **routes_of_administration** - Routes for medication administration
+
+### Patient Treatment Orders (Active)
+- **medication_orders** - Scheduled medications with completion tracking
+- **procedure_orders** - Scheduled procedures with completion tracking
+- **investigation_orders** - Scheduled investigations with results
+
+### Records & Logs
+- **nursing_notes** - Flexible notes by nurses/doctors (replaces logs)
+- **vital_signs** - Patient vital sign records
+- **treatment_history** - Complete historical record of all treatments
+- **notification_queue** - Pending notifications for popup alerts
+
+---
+
+## 🎨 Frontend Architecture
+
+### Page Structure
+
+#### 1. **Public Hero Page** (`/`)
+- Marketing-style landing page similar to nurselog.netlify.app
+- Features, benefits, call-to-action
+- Login button to admin dashboard
+
+#### 2. **Admin Dashboard** (`/admin/dashboard`)
+- Main view with tabs:
+  - **Overview** - Combined medication/procedure/investigation timeline
+  - **Medications** - Medication orders by time
+  - **Procedures** - Procedure orders by time
+  - **Investigations** - Investigation orders by time
+  - **Patients** - Patient list with discharge functionality
+  - **Nursing Notes** - All nursing notes
+  - **Vital Signs** - Vital sign records
+  - **Staff** - User management
+  - **Departments** - Department management
+  - **Master Data** - Medications/Procedures/Investigations catalogs
+
+#### 3. **Patient Detail View** (`/admin/patients/:id`)
+- Complete treatment history for specific patient
+- All medications, procedures, investigations ever done
+- Timeline view of care
+
+### Key UI Components
+
+#### Time-Grouped Treatment Table
+```typescript
+// Shows multiple treatments at same time in single row
+// Each row has Add, Edit, Delete buttons
+{
+  time: "06:00 AM",
+  treatments: [
+    { type: "medication", name: "Medicine A", status: "pending" },
+    { type: "medication", name: "Medicine B", status: "pending" },
+    { type: "procedure", name: "Blood Draw", status: "completed" }
+  ],
+  patient: { ipdNumber, name, age, gender, bed, ward, diagnosis },
+  actions: {
+    add: true,      // Opens modal to add new treatment at this time
+    edit: true,     // Edit any treatment in this row
+    delete: true    // Delete any treatment in this row
+  }
+}
+```
+
+#### Notification Popup System
+- Real-time polling or WebSocket connection
+- Display upcoming/overdue treatments
+- Station board-style UI (flip cards, scrolling text)
+- Acknowledge/dismiss functionality
+
+#### Inline Editing Features
+- Checkbox for completion status (checkmark)
+- Click-to-edit fields (name, dosage, notes, etc.)
+- Auto-save with optimistic updates
+- Admin-only write permissions
+
+---
+
+## 🔐 Authentication & Authorization
+
+### Role-Based Access Control
+- **Admin**: Full CRUD access to all tables (separate authentication)
+- **Staff (Doctor/Nurse)**: Reference data only, no login capability
+
+### Authentication Flow
+1. Public hero page is accessible to all
+2. Admin login via `/login` with username/password
+3. Admin credentials validated against `admins` table
+4. JWT or session-based authentication for admins only
+5. Protect all `/admin/*` routes with authentication middleware
+
+---
+
+## 🚀 API Endpoints
+
+### Patients
+```
+GET    /api/patients              # List all patients
+GET    /api/patients/:id          # Get patient details with full history
+POST   /api/patients              # Create patient (admin only)
+PATCH  /api/patients/:id          # Update patient (admin only)
+PATCH  /api/patients/:id/discharge # Discharge patient (admin only)
+DELETE /api/patients/:id          # Delete patient (admin only)
+```
+
+### Treatment Orders
+```
+GET    /api/medication-orders     # List medication orders (filterable by patient, date, time)
+POST   /api/medication-orders     # Create medication order (admin only)
+PATCH  /api/medication-orders/:id # Update/complete order (admin only)
+DELETE /api/medication-orders/:id # Delete order (admin only)
+
+# Similar endpoints for procedure-orders and investigation-orders
+```
+
+### Combined Timeline View
+```
+GET    /api/timeline              # Get combined treatment timeline
+                                  # Query params: date, patient_id, ward
+                                  # Groups by time, returns all treatment types
+```
+
+### Nursing Notes
+```
+GET    /api/nursing-notes         # List notes (filterable by patient, date, type)
+POST   /api/nursing-notes         # Create note (admin only)
+PATCH  /api/nursing-notes/:id     # Update note (admin only)
+DELETE /api/nursing-notes/:id     # Delete note (admin only)
+```
+
+### Notifications
+```
+GET    /api/notifications         # Get pending notifications
+PATCH  /api/notifications/:id/acknowledge # Mark as acknowledged
+```
+
+### Treatment History
+```
+GET    /api/treatment-history     # Get historical records
+                                  # Query params: patient_id, treatment_type, date_range
+```
+
+### Staff & Master Data
+```
+# Admin authentication
+POST   /api/auth/login            # Admin login
+POST   /api/auth/logout           # Admin logout
+GET    /api/auth/me               # Get current admin info
+
+# Staff management (doctors/nurses - no auth)
+GET/POST/PATCH/DELETE /api/staff
+
+# Other master data
+GET/POST/PATCH/DELETE /api/departments
+GET/POST/PATCH/DELETE /api/medications
+GET/POST/PATCH/DELETE /api/procedures
+GET/POST/PATCH/DELETE /api/investigations
+```
+
+---
+
+## 🔄 Key Workflows
+
+### 1. Treatment Order Creation
+1. Admin creates medication/procedure/investigation order
+2. System validates patient exists and is not discharged
+3. Order saved with scheduled_time and is_completed=false
+4. Notification created in notification_queue for scheduled_time
+5. Front-end shows in appropriate timeline view
+
+### 2. Treatment Completion
+1. Admin checks checkbox or clicks complete
+2. PATCH request updates is_completed=true, completed_at, completed_by
+3. Record copied to treatment_history table
+4. Associated notification marked as acknowledged
+5. UI updates optimistically
+
+### 3. Patient Discharge
+1. Admin clicks "Discharge" button on patient row
+2. PATCH /api/patients/:id/discharge sets is_discharged=true, discharge_date=today
+3. All active orders for patient set to is_active=false
+4. Patient remains in system for historical records
+5. Removed from active patient list (filter by is_discharged=false)
+
+### 4. Notification Display
+1. Background job or polling checks notification_queue
+2. Fetch notifications where scheduled_time <= now + buffer (e.g., 30 min)
+3. Display in popup/modal with treatment details
+4. User can acknowledge (updates is_acknowledged=true)
+5. Acknowledged notifications removed from popup
+
+### 5. Timeline View Generation
+1. Query all three order tables with JOIN on patients table
+2. Filter by date range (default: today)
+3. Group results by scheduled_time and patient_id
+4. Transform to: `{ time, patient_info, treatments[] }`
+5. Render as single table with time-based rows
+
+
+## 🎯 Frontend Component Breakdown
+
+### Key Components to Build
+
+#### 1. **HeroPage.tsx**
+- Marketing sections (hero, features, testimonials, pricing, CTA)
+- Responsive design (mobile-first)
+- Link to login
+
+#### 2. **AdminDashboard.tsx**
+- Tabbed interface (Overview, Medications, Procedures, etc.)
+- Notification popup overlay
+- Role-based rendering (admin only)
+
+#### 3. **TimelineTable.tsx**
+- Displays combined treatment view
+- Time-grouped rows with multiple treatments
+- Checkboxes for completion
+- **Add button** - Opens modal/dropdown to add new medication/procedure/investigation at that specific time
+- **Edit button** - Inline editing for each treatment
+- **Delete button** - Remove individual treatments
+- Patient info columns (IPD, name, age, gender, bed, ward, diagnosis)
+
+#### 4. **MedicationOrdersTable.tsx** (and similar for procedures/investigations)
+- Filtered view for specific treatment type
+- Same time-grouping logic
+- **Add button** - Quick add new medication at specific time
+- **Edit/Delete actions** per row
+- CRUD operations (admin only)
+
+#### 5. **PatientTable.tsx**
+- Patient list with discharge button
+- Click row to view detail
+- Filter by ward, admission date
+
+#### 6. **PatientDetailView.tsx**
+- Full treatment history timeline
+- All medications, procedures, investigations
+- Nursing notes
+- Vital signs chart
+
+#### 7. **NotificationPopup.tsx**
+- Train station board style
+- Auto-refresh every 30 seconds
+- Acknowledge button
+- Color-coded by priority (red=high, yellow=medium, green=low)
+
+#### 8. **NursingNotesForm.tsx**
+- Rich text editor for notes
+- Link to related orders (optional)
+- Timestamp and author display
+
+#### 9. **InlineEditableCell.tsx**
+- Reusable component for editable table cells
+- Click to edit, blur to save
+- Loading state during save
+
+#### 10. **AddTreatmentModal.tsx**
+- Modal dialog triggered by "Add" button in each row
+- Context-aware: knows current time slot and patient
+- Form fields:
+  - Treatment type selector (medication/procedure/investigation)
+  - Dynamic fields based on type:
+    - **Medication**: medication dropdown, route, dosage, frequency
+    - **Procedure**: procedure dropdown, notes
+    - **Investigation**: investigation dropdown, notes
+  - Priority selector
+  - Notes textarea
+- Submit creates new order at the specified time
+- Success: closes modal, refreshes table
+
+#### 11. **TreatmentActionsDropdown.tsx**
+- Action menu for each treatment row
+- Options:
+  - ✅ Mark Complete (checkbox)
+  - ➕ Add Another Treatment (opens AddTreatmentModal)
+  - ✏️ Edit (enables inline editing)
+  - 🗑️ Delete (with confirmation)
+- Keyboard accessible
+
+---
+
+## 🧪 Testing Checklist
+
+### Unit Tests
+- [ ] Drizzle schema validation
+- [ ] API route handlers
+- [ ] Timeline grouping logic
+- [ ] Notification filtering logic
+
+### Integration Tests
+- [ ] Patient CRUD operations
+- [ ] Treatment order creation and completion
+- [ ] Discharge workflow
+- [ ] Notification acknowledgment
+- [ ] Treatment history recording
+
+### E2E Tests
+- [ ] Login flow
+- [ ] Create patient and assign staff
+- [ ] Schedule multiple treatments at same time
+- [ ] Complete treatments via checkbox
+- [ ] View notifications popup
+- [ ] Discharge patient
+- [ ] View patient treatment history
+
+
+
+## 📝 Development Priority
+
+### Phase 1: Core Database & API (Week 1)
+1. Implement new schema
+2. Migrate data from old tables
+3. Build API endpoints for CRUD operations
+4. Test with Postman/Thunder Client
+
+### Phase 2: Admin Dashboard (Week 2)
+1. Build basic admin layout with tabs
+2. Implement patient table with discharge
+3. Create treatment order tables (medication, procedure, investigation)
+4. Add inline editing and checkboxes
+
+### Phase 3: Timeline & Notifications (Week 3)
+1. Build combined timeline view with time-grouping
+2. Implement notification popup system
+3. Add real-time polling or WebSocket
+4. Test notification acknowledgment
+
+### Phase 4: Patient Detail & History (Week 4)
+1. Build patient detail view
+2. Display treatment history timeline
+3. Add nursing notes interface
+4. Create vital signs visualization
+
+### Phase 5: Hero Page & Polish (Week 5)
+1. Design and build hero landing page
+2. Add authentication flow
+3. UI/UX polish and responsive design
+4. Performance optimization
+
+---
+
+## 🎨 UI/UX Guidelines
+
+### Design Principles
+- **Medical Clarity**: High contrast, readable fonts, clear status indicators
+- **Information Density**: Pack data efficiently without overwhelming
+- **Quick Actions**: Minimize clicks for common tasks (checkboxes, inline edit, add button)
+- **Contextual Add**: "Add" button always knows the time slot and patient context
+- **Visual Hierarchy**: Use color and size to prioritize critical info
+
+### Color Scheme
+- **High Priority**: Red (#EF4444)
+- **Medium Priority**: Yellow (#F59E0B)
+- **Low Priority**: Green (#10B981)
+- **Completed**: Gray (#9CA3AF)
+- **Overdue**: Dark Red (#DC2626)
+
+### Notification Design
+- Flip card animation for new notifications
+- Scrolling marquee for multiple simultaneous alerts
+- Sound alert (optional, user preference)
+- Persistent banner until acknowledged
+
+---
+
+## 🔧 Technical Considerations
+
+### Performance
+- Index all foreign keys and timestamp columns
+- Implement pagination for large datasets
+- Cache frequently accessed data (patient lists, master data)
+- Use connection pooling for database
+
+### Scalability
+- Consider separate read replicas for reporting
+- Archive old treatment_history records periodically
+- Implement rate limiting on API endpoints
+
+### Security
+- Hash passwords with bcrypt
+- Validate all inputs with Zod
+- Sanitize user inputs to prevent SQL injection
+- Implement CSRF protection
+- Use HTTPS in production
+
+### Monitoring
+- Log all admin actions (audit trail)
+- Monitor notification delivery success rate
+- Track API response times
+- Alert on database connection failures
+
+---
+
+## 📚 Additional Resources
+
+### Documentation to Reference
+- Drizzle ORM: https://orm.drizzle.team/
+- React Query: https://tanstack.com/query/latest
+- Shadcn UI: https://ui.shadcn.com/
+- Zod Validation: https://zod.dev/
+
+### Inspirational UIs
+- https://nurselog.netlify.app/ (hero page reference)
+- Linear (clean, efficient data tables)
+- Notion (inline editing, checkboxes)
+
+---
+
+## ✅ Success Criteria
+
+The project is complete when:
+1. ✅ Separate admin authentication table with secure login
+2. ✅ Staff (doctors/nurses) are reference data without login capability
+3. ✅ Admin can view all patients, treatments, and notes in unified dashboard
+4. ✅ Multiple treatments at same time display in single row
+5. ✅ Each row has Add button to insert new medication/procedure/investigation at that time
+6. ✅ Edit and Delete buttons work for individual treatments
+7. ✅ Real-time notifications popup for scheduled treatments
+8. ✅ Inline editing works for all admin-editable fields
+9. ✅ Discharge workflow properly archives patient data
+10. ✅ Patient detail view shows complete treatment history
+11. ✅ Hero page attracts users and provides clear value proposition
+12. ✅ System is responsive on mobile and desktop
+13. ✅ All data is persisted and queryable from treatment_history
+14. ✅ Multiple doctors/nurses can be assigned to each patient
