@@ -13,6 +13,7 @@ import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
 import AddPatientModal from "@/components/AddPatientModal";
 import AddNursingNoteModal from "@/components/AddNursingNoteModal";
+import DashboardClock from "@/components/DashboardClock";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import type { Patient as BackendPatient, NursingNote as BackendNursingNote, Staff } from "@shared/schema";
@@ -238,6 +239,10 @@ export default function AdminDashboard() {
         
         <div className="pt-16">
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+          
+          <div className="max-w-7xl mx-auto px-8 pt-6 pb-4">
+            <DashboardClock />
+          </div>
           
           <main className="max-w-7xl mx-auto px-8 py-8">
             {activeTab === 'overview' && (
