@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import AdminHeader from "@/components/AdminHeader";
 import TabNavigation, { DashboardTab } from "@/components/TabNavigation";
-import TimelineTable, { TimelineRow } from "@/components/TimelineTable";
+import TimelineTable from "@/components/TimelineTable";
 import PatientTable, { Patient } from "@/components/PatientTable";
 import NursingNotesTable, { NursingNote } from "@/components/NursingNotesTable";
 import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
@@ -37,185 +37,7 @@ export default function AdminDashboard() {
     }
   }, [activeTab, setLocation]);
   
-  const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
-  const [showAddPatientModal, setShowAddPatientModal] = useState(false);
-  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
-  const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
-
-  // Mock data removed -
-    patient: {
-      ipdNumber: 'IPD001',
-      name: 'John Smith',
-      age: 65,
-      gender: 'M',
-      bed: 'A-101',
-      ward: 'ICU',
-      diagnosis: 'Pneumonia',
-    },
-    treatments: [
-      { id: '1', type: 'medication', name: 'Amoxicillin', details: '500mg IV', isCompleted: false, priority: 'High' },
-      { id: '2', type: 'medication', name: 'Paracetamol', details: '650mg PO', isCompleted: false, priority: 'Medium' },
-    ],
-  },
-  {
-    time: '06:00 AM',
-    patient: {
-      ipdNumber: 'IPD002',
-      name: 'Mary Johnson',
-      age: 45,
-      gender: 'F',
-      bed: 'B-205',
-      ward: 'General',
-      diagnosis: 'Diabetes',
-    },
-    treatments: [
-      { id: '3', type: 'procedure', name: 'Blood Sugar Check', isCompleted: true, priority: 'High' },
-    ],
-  },
-  {
-    time: '06:15 AM',
-    patient: {
-      ipdNumber: 'IPD003',
-      name: 'Robert Davis',
-      age: 72,
-      gender: 'M',
-      bed: 'A-103',
-      ward: 'ICU',
-      diagnosis: 'Heart Failure',
-    },
-    treatments: [
-      { id: '4', type: 'investigation', name: 'Blood Glucose Test', isCompleted: false, priority: 'High' },
-    ],
-  },
-];
-
-const mockPatients: Patient[] = [
-  {
-    id: '1',
-    ipdNumber: 'IPD001',
-    name: 'John Smith',
-    age: 65,
-    gender: 'M',
-    bed: 'A-101',
-    ward: 'ICU',
-    diagnosis: 'Pneumonia',
-    admissionDate: new Date('2024-01-15'),
-    isDischarged: false,
-  },
-  {
-    id: '2',
-    ipdNumber: 'IPD002',
-    name: 'Mary Johnson',
-    age: 45,
-    gender: 'F',
-    bed: 'B-205',
-    ward: 'General',
-    diagnosis: 'Diabetes',
-    admissionDate: new Date('2024-01-18'),
-    isDischarged: false,
-  },
-];
-
-const mockNursingNotes: NursingNote[] = [
-  {
-    id: '1',
-    patientName: 'John Smith',
-    ipdNumber: 'IPD001',
-    noteType: 'Observation',
-    note: 'Patient showing improvement in respiratory function. Oxygen saturation stable at 95%. Cough less frequent.',
-    recordedBy: 'Nurse Sarah Williams',
-    recordedAt: new Date('2024-01-20T08:30:00'),
-  },
-  {
-    id: '2',
-    patientName: 'Mary Johnson',
-    ipdNumber: 'IPD002',
-    noteType: 'Assessment',
-    note: 'Blood glucose levels stable. Patient reports feeling better. No signs of hypoglycemia.',
-    recordedBy: 'Dr. Emily Chen',
-    recordedAt: new Date('2024-01-20T10:15:00'),
-  },
-  {
-    id: '3',
-    patientName: 'John Smith',
-    ipdNumber: 'IPD001',
-    noteType: 'Progress',
-    note: 'Patient able to walk short distances with assistance. Appetite improving. Family visited today.',
-    recordedBy: 'Nurse Michael Brown',
-    recordedAt: new Date('2024-01-20T14:00:00'),
-  },
-];
-
-const mockBulletinItems: BulletinItem[] = [
-  {
-    id: '1',
-    time: '06:00',
-    patientName: 'John Smith',
-    ipdNumber: 'IPD001',
-    treatmentType: 'medication',
-    treatmentName: 'Amoxicillin',
-    details: '500mg IV',
-    priority: 'High',
-    isOverdue: false,
-    bedNumber: 'A-101',
-  },
-  {
-    id: '2',
-    time: '06:00',
-    patientName: 'Mary Johnson',
-    ipdNumber: 'IPD002',
-    treatmentType: 'procedure',
-    treatmentName: 'Blood Sugar Check',
-    priority: 'Medium',
-    isOverdue: false,
-    bedNumber: 'B-205',
-  },
-  {
-    id: '3',
-    time: '06:15',
-    patientName: 'Robert Davis',
-    ipdNumber: 'IPD003',
-    treatmentType: 'investigation',
-    treatmentName: 'Blood Glucose Test',
-    priority: 'High',
-    isOverdue: false,
-    bedNumber: 'A-103',
-  },
-  {
-    id: '4',
-    time: '06:30',
-    patientName: 'John Smith',
-    ipdNumber: 'IPD001',
-    treatmentType: 'medication',
-    treatmentName: 'Paracetamol',
-    details: '650mg PO',
-    priority: 'Low',
-    isOverdue: false,
-    bedNumber: 'A-101',
-  },
-];
-
-export default function AdminDashboard() {
-  const { admin } = useAuth();
-  const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!admin) {
-      setLocation('/login');
-    }
-  }, [admin, setLocation]);
-
-  // Redirect to master data page when master tab is clicked
-  useEffect(() => {
-    if (activeTab === 'master') {
-      setLocation('/admin/master-data');
-    }
-  }, [activeTab, setLocation]);
   const [showBulletinBoard, setShowBulletinBoard] = useState(true);
-  const [bulletinItems, setBulletinItems] = useState(mockBulletinItems);
   const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
@@ -364,6 +186,25 @@ export default function AdminDashboard() {
     }
   });
 
+  // Transform timeline data to bulletin items for upcoming treatments
+  const bulletinItems: BulletinItem[] = timelineData
+    .flatMap((row: any) => 
+      row.treatments.map((treatment: any) => ({
+        id: treatment.id,
+        time: row.time,
+        patientName: row.patient.name,
+        ipdNumber: row.patient.ipdNumber,
+        treatmentType: treatment.type,
+        treatmentName: treatment.name,
+        details: treatment.details,
+        priority: treatment.priority,
+        isOverdue: treatment.isOverdue || false,
+        bedNumber: row.patient.bed,
+      }))
+    )
+    .filter((item: any) => !item.isCompleted)
+    .slice(0, 10); // Show top 10 upcoming items
+
   const handleAddTreatment = (time: string, patientId: string) => {
     setModalDefaults({ time, patient: patientId });
     setShowAddTreatmentModal(true);
@@ -371,8 +212,7 @@ export default function AdminDashboard() {
 
   const handleBulletinItemClick = (id: string) => {
     console.log('Bulletin item clicked:', id);
-    // Mark as acknowledged or navigate to details
-    setBulletinItems(bulletinItems.filter(item => item.id !== id));
+    queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
   };
 
   return (
