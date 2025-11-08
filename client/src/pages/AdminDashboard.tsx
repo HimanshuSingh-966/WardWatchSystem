@@ -26,7 +26,12 @@ export default function AdminDashboard() {
   // Redirect to login if not authenticated (only after loading completes)
   useEffect(() => {
     if (!isLoading && !admin) {
-      setLocation('/login');
+      const timer = setTimeout(() => {
+        if (!admin) {
+          setLocation('/login');
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [admin, isLoading, setLocation]);
 
@@ -228,7 +233,6 @@ export default function AdminDashboard() {
       <div className={showBulletinBoard && bulletinItems.length > 0 ? 'pt-[500px]' : ''}>
         <AdminHeader
           notificationCount={bulletinItems.length}
-          adminName={admin?.full_name || "Admin"}
           onNotificationClick={() => setShowBulletinBoard(!showBulletinBoard)}
         />
         
