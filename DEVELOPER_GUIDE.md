@@ -1,7 +1,7 @@
 # Ward Watch - Frontend & Backend Communication Guide
 
 ## Overview
-Ward Watch is a full-stack web application built with React (frontend) and Express (backend). This guide explains how the frontend and backend communicate.
+Ward Watch is a full-stack web application built with React (frontend) and Express (backend). The application follows a **schema-first** approach where all data models are defined in `shared/schema.ts` using Zod, ensuring type safety and validation across the entire stack.
 
 ## Architecture
 
@@ -16,9 +16,15 @@ Ward Watch is a full-stack web application built with React (frontend) and Expre
         │                                                 │
         ▼                                                 ▼
 ┌─────────────────┐                              ┌─────────────────┐
-│  React Query    │                              │   PostgreSQL    │
-│  (State Mgmt)   │                              │    Database     │
+│  React Query    │                              │   Storage Layer │
+│  (Cache/State)  │                              │   (Interface)   │
 └─────────────────┘                              └─────────────────┘
+                                                          │
+                                                          ▼
+                                                  ┌─────────────────┐
+                                                  │   PostgreSQL    │
+                                                  │    Database     │
+                                                  └─────────────────┘
 ```
 
 ## Project Structure
@@ -29,16 +35,38 @@ ward-watch/
 │   └── src/
 │       ├── pages/           # Page components (Routes)
 │       ├── components/      # Reusable UI components
-│       ├── lib/            # Utilities & query client
-│       └── contexts/       # React contexts (Auth, etc.)
+│       ├── lib/
+│       │   └── queryClient.ts  # React Query config & apiRequest
+│       └── contexts/        # React contexts (Auth)
 ├── server/                  # Backend code
 │   ├── index.ts            # Express server entry point
-│   ├── routes.ts           # API routes
-│   ├── storage.ts          # Data storage interface
-│   └── auth.ts             # Authentication logic
+│   ├── routes.ts           # API routes (thin controllers)
+│   ├── storage.ts          # Storage interface + implementation
+│   ├── auth.ts             # JWT authentication middleware
+│   └── db/
+│       └── schema.sql      # PostgreSQL schema
 └── shared/                  # Shared between frontend & backend
-    └── schema.ts           # TypeScript types & database schema
+    └── schema.ts           # Zod schemas & TypeScript types
 ```
+
+## Core Principles
+
+### 1. Schema-First Development
+All data models are defined once in `shared/schema.ts` using Zod:
+- Frontend uses the types for TypeScript
+- Backend uses them for validation
+- Database schema mirrors the structure
+
+### 2. Storage Abstraction Layer
+The backend uses a storage interface (`IStorage`) that abstracts database operations:
+- Routes stay thin (just validation and response formatting)
+- All database logic is in the storage layer
+- Easy to swap storage implementations (in-memory, PostgreSQL, etc.)
+
+### 3. Automatic Authentication
+React Query is configured with default headers that automatically include JWT tokens:
+- No need to manually add auth headers to every request
+- 401 responses automatically handled
 
 ## How Frontend & Backend Communicate
 
@@ -46,20 +74,22 @@ ward-watch/
 
 **Login Process:**
 ```typescript
-// Frontend: client/src/pages/LoginPage.tsx
-const handleSubmit = async (e) => {
-  await login(username, password);  // Calls AuthContext
-  setLocation('/admin/dashboard');
-};
-
-// AuthContext: client/src/contexts/AuthContext.tsx
-const login = async (username, password) => {
+// Frontend: client/src/contexts/AuthContext.tsx
+const login = async (username: string, password: string) => {
+  // Manual fetch for login (no auth token yet)
   const response = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Login failed');
+  }
+  
   const data = await response.json();
+  setAdmin(data.admin);
   setToken(data.token);
   localStorage.setItem('auth_token', data.token);
 };
@@ -67,36 +97,81 @@ const login = async (username, password) => {
 // Backend: server/routes.ts
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
-  // Validate credentials & return JWT token
+  
+  const admin = await storage.getAdminByUsername(username);
+  if (!admin || !(await bcrypt.compare(password, admin.password_hash))) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  
+  const token = jwt.sign({ adminId: admin.admin_id }, JWT_SECRET, {
+    expiresIn: '24h',
+  });
+  
   res.json({ token, admin });
 });
 ```
 
-**Protected Routes:**
+**Auth Token Management:**
+All subsequent API calls automatically include the auth token via React Query's default configuration:
 ```typescript
-// All subsequent API calls include the token
-fetch('/api/patients', {
-  headers: {
-    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+// client/src/lib/queryClient.ts
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('auth_token');
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
+  return headers;
+}
+
+// This is used automatically by React Query for ALL requests
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: getQueryFn({ on401: "throw" }),  // Auto-adds auth headers
+    },
+  },
 });
 ```
 
 ### 2. Data Fetching with React Query
 
+The queryKey automatically becomes the URL thanks to the default `queryFn`:
+
 **Frontend Pattern:**
 ```typescript
 // client/src/pages/AdminDashboard.tsx
-const { data: patients = [], isLoading } = useQuery<Patient[]>({
-  queryKey: ['/api/patients'],
-  queryFn: async () => {
-    const res = await fetch('/api/patients?discharged=false', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-    });
-    if (!res.ok) throw new Error('Failed to fetch patients');
-    return res.json();
-  }
+import { useQuery } from "@tanstack/react-query";
+import type { Patient } from "@shared/schema";
+
+// Query key IS the URL - auth headers added automatically!
+const { data: patients = [], isLoading, isError } = useQuery<Patient[]>({
+  queryKey: ['/api/patients'],  // This becomes the fetch URL
 });
+
+// With query parameters
+const { data: activePatients = [] } = useQuery<Patient[]>({
+  queryKey: ['/api/patients?discharged=false'],
+});
+```
+
+**Why this works:**
+```typescript
+// client/src/lib/queryClient.ts - Default queryFn
+export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => 
+  QueryFunction<T> = ({ on401 }) => async ({ queryKey }) => {
+    const res = await fetch(queryKey.join("/") as string, {
+      credentials: "include",
+      headers: getAuthHeaders(),  // Automatically adds Bearer token!
+    });
+    
+    if (on401 === "returnNull" && res.status === 401) {
+      return null;
+    }
+    
+    await throwIfResNotOk(res);
+    return await res.json();
+  };
 ```
 
 **Backend Pattern:**
@@ -111,37 +186,101 @@ app.get('/api/patients', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch patients' });
   }
 });
+
+// authenticateToken middleware from server/auth.ts
+// - Verifies JWT token from Authorization header
+// - Adds admin info to req.admin
+// - Returns 401 if invalid
 ```
 
 ### 3. Creating/Updating Data
 
+Mutations use `apiRequest` which automatically adds auth headers and handles errors:
+
 **Frontend Pattern:**
 ```typescript
+import { useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import type { InsertPatient } from "@shared/schema";
+
 const addPatientMutation = useMutation({
-  mutationFn: (data) => apiRequest('/api/patients', 'POST', {
-    ipd_number: data.ipdNumber,
-    patient_name: data.name,
-    // ... other fields
-  }),
+  mutationFn: async (data: InsertPatient) => {
+    // apiRequest automatically adds Authorization header
+    const res = await apiRequest('POST', '/api/patients', data);
+    return await res.json();
+  },
   onSuccess: () => {
+    // Invalidate cache to trigger refetch
     queryClient.invalidateQueries({ queryKey: ['/api/patients'] });
     toast({ title: "Success", description: "Patient added" });
+  },
+  onError: (error: Error) => {
+    toast({ 
+      variant: "destructive", 
+      description: error.message 
+    });
   }
 });
 
 // Using the mutation
-addPatientMutation.mutate(formData);
+addPatientMutation.mutate({
+  ipd_number: "IPD2024001",
+  patient_name: "John Doe",
+  age: 45,
+  gender: "M",
+  bed_number: "101",
+  ward: "General Ward",
+  diagnosis: "Fever",
+  admission_date: "2024-11-08",
+});
 ```
 
-**Backend Pattern:**
+**apiRequest Helper:**
 ```typescript
+// client/src/lib/queryClient.ts
+export async function apiRequest(
+  method: string,
+  url: string,
+  data?: unknown,
+): Promise<Response> {
+  const headers: HeadersInit = {
+    ...getAuthHeaders(),  // Adds Bearer token automatically
+    ...(data ? { "Content-Type": "application/json" } : {}),
+  };
+  
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: data ? JSON.stringify(data) : undefined,
+    credentials: "include",
+  });
+  
+  await throwIfResNotOk(res);  // Throws on non-2xx
+  return res;
+}
+```
+
+**Backend Pattern with Validation:**
+```typescript
+import { insertPatientSchema } from "@shared/schema";
+
 app.post('/api/patients', authenticateToken, async (req, res) => {
   try {
-    const patientData = req.body;
-    const newPatient = await storage.createPatient(patientData);
+    // Validate request body using Zod schema
+    const validatedData = insertPatientSchema.parse(req.body);
+    
+    // Storage layer handles database interaction
+    const newPatient = await storage.createPatient(validatedData);
+    
     res.status(201).json(newPatient);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: error.errors 
+      });
+    }
+    res.status(500).json({ error: 'Failed to create patient' });
   }
 });
 ```
