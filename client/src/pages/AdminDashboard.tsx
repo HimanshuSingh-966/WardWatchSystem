@@ -3,8 +3,13 @@ import AdminHeader from "@/components/AdminHeader";
 import TabNavigation, { DashboardTab } from "@/components/TabNavigation";
 import TimelineTable, { TimelineRow } from "@/components/TimelineTable";
 import PatientTable, { Patient } from "@/components/PatientTable";
+import NursingNotesTable, { NursingNote } from "@/components/NursingNotesTable";
 import NotificationPopup, { Notification } from "@/components/NotificationPopup";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
+import AddPatientModal from "@/components/AddPatientModal";
+import AddNursingNoteModal from "@/components/AddNursingNoteModal";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 // TODO: Remove mock data - replace with actual API calls
 const mockTimelineData: TimelineRow[] = [
@@ -68,6 +73,36 @@ const mockPatients: Patient[] = [
   },
 ];
 
+const mockNursingNotes: NursingNote[] = [
+  {
+    id: '1',
+    patientName: 'John Smith',
+    ipdNumber: 'IPD001',
+    noteType: 'Observation',
+    note: 'Patient showing improvement in respiratory function. Oxygen saturation stable at 95%. Cough less frequent.',
+    recordedBy: 'Nurse Sarah Williams',
+    recordedAt: new Date('2024-01-20T08:30:00'),
+  },
+  {
+    id: '2',
+    patientName: 'Mary Johnson',
+    ipdNumber: 'IPD002',
+    noteType: 'Assessment',
+    note: 'Blood glucose levels stable. Patient reports feeling better. No signs of hypoglycemia.',
+    recordedBy: 'Dr. Emily Chen',
+    recordedAt: new Date('2024-01-20T10:15:00'),
+  },
+  {
+    id: '3',
+    patientName: 'John Smith',
+    ipdNumber: 'IPD001',
+    noteType: 'Progress',
+    note: 'Patient able to walk short distances with assistance. Appetite improving. Family visited today.',
+    recordedBy: 'Nurse Michael Brown',
+    recordedAt: new Date('2024-01-20T14:00:00'),
+  },
+];
+
 const mockNotifications: Notification[] = [
   {
     id: '1',
@@ -91,14 +126,16 @@ const mockNotifications: Notification[] = [
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(true);
   const [notifications, setNotifications] = useState(mockNotifications);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
+  const [showAddPatientModal, setShowAddPatientModal] = useState(false);
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
 
   const handleAddTreatment = (time: string, patientId: string) => {
     setModalDefaults({ time, patient: patientId });
-    setShowAddModal(true);
+    setShowAddTreatmentModal(true);
   };
 
   const handleAcknowledge = (id: string) => {
@@ -119,7 +156,9 @@ export default function AdminDashboard() {
         <main className="max-w-7xl mx-auto px-8 py-8">
           {activeTab === 'overview' && (
             <div>
-              <h2 className="text-2xl font-semibold text-foreground mb-6">Treatment Timeline</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold text-foreground">Treatment Timeline</h2>
+              </div>
               <TimelineTable
                 data={mockTimelineData}
                 onAddTreatment={handleAddTreatment}
@@ -148,7 +187,16 @@ export default function AdminDashboard() {
           
           {activeTab === 'patients' && (
             <div>
-              <h2 className="text-2xl font-semibold text-foreground mb-6">Patient Management</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold text-foreground">Patient Management</h2>
+                <Button 
+                  onClick={() => setShowAddPatientModal(true)}
+                  data-testid="button-add-patient"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Patient
+                </Button>
+              </div>
               <PatientTable
                 patients={mockPatients}
                 onViewDetails={(id) => console.log('View patient:', id)}
@@ -158,7 +206,27 @@ export default function AdminDashboard() {
             </div>
           )}
           
-          {(activeTab === 'procedures' || activeTab === 'investigations' || activeTab === 'notes' || 
+          {activeTab === 'notes' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold text-foreground">Nursing Notes</h2>
+                <Button 
+                  onClick={() => setShowAddNoteModal(true)}
+                  data-testid="button-add-note"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Note
+                </Button>
+              </div>
+              <NursingNotesTable
+                notes={mockNursingNotes}
+                onEdit={(id) => console.log('Edit note:', id)}
+                onDelete={(id) => console.log('Delete note:', id)}
+              />
+            </div>
+          )}
+          
+          {(activeTab === 'procedures' || activeTab === 'investigations' || 
             activeTab === 'vitals' || activeTab === 'staff' || activeTab === 'departments' || activeTab === 'master') && (
             <div className="text-center py-12">
               <h2 className="text-2xl font-semibold text-foreground mb-4">
@@ -172,7 +240,7 @@ export default function AdminDashboard() {
         </main>
       </div>
       
-      {showNotifications && (
+      {showNotifications && notifications.length > 0 && (
         <NotificationPopup
           notifications={notifications}
           onClose={() => setShowNotifications(false)}
@@ -181,10 +249,22 @@ export default function AdminDashboard() {
       )}
       
       <AddTreatmentModal
-        open={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        open={showAddTreatmentModal}
+        onClose={() => setShowAddTreatmentModal(false)}
         defaultTime={modalDefaults.time}
         defaultPatient={modalDefaults.patient}
+      />
+      
+      <AddPatientModal
+        open={showAddPatientModal}
+        onClose={() => setShowAddPatientModal(false)}
+        onSubmit={(data) => console.log('New patient:', data)}
+      />
+      
+      <AddNursingNoteModal
+        open={showAddNoteModal}
+        onClose={() => setShowAddNoteModal(false)}
+        onSubmit={(data) => console.log('New nursing note:', data)}
       />
     </div>
   );
