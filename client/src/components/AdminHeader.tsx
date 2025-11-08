@@ -9,18 +9,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdminHeaderProps {
   onNotificationClick?: () => void;
   notificationCount?: number;
-  adminName?: string;
 }
 
 export default function AdminHeader({ 
   onNotificationClick, 
   notificationCount = 0,
-  adminName = "Admin User"
 }: AdminHeaderProps) {
+  const { admin, logout } = useAuth();
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-card border-b border-card-border">
       <div className="h-full px-8 flex items-center justify-between">
@@ -53,14 +53,14 @@ export default function AdminHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>{adminName}</DropdownMenuLabel>
+              <DropdownMenuLabel>{admin?.full_name || "Admin User"}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem data-testid="menu-profile">
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" data-testid="menu-logout">
+              <DropdownMenuItem className="text-destructive" onClick={logout} data-testid="menu-logout">
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </DropdownMenuItem>

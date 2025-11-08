@@ -5,17 +5,37 @@ import { Card } from "@/components/ui/card";
 import { Activity } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
+  const { login } = useAuth();
+  const { toast } = useToast();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login attempt:', { username, password });
-    // TODO: Replace with actual authentication
-    setLocation('/admin/dashboard');
+    setIsLoading(true);
+
+    try {
+      await login(username, password);
+      toast({
+        title: "Login successful",
+        description: "Welcome to Ward Watch Admin",
+      });
+      setLocation('/admin/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: error.message || "Invalid username or password",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -58,13 +78,13 @@ export default function LoginPage() {
             />
           </div>
           
-          <Button type="submit" className="w-full" data-testid="button-login">
-            Sign In
+          <Button type="submit" className="w-full" data-testid="button-login" disabled={isLoading}>
+            {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
         
         <p className="mt-6 text-xs text-center text-muted-foreground">
-          For demo purposes, use any username/password
+          Use your admin credentials to sign in
         </p>
       </Card>
     </div>
