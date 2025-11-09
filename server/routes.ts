@@ -167,11 +167,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         res.status(201).json(patient);
       } catch (assignmentError: any) {
-        await storage.deletePatient(patient.patient_id);
-        throw new Error(`Failed to assign staff: ${assignmentError.message}`);
+        try {
+          await storage.deletePatient(patient.patient_id);
+          res.status(500).json({ error: `Failed to assign staff: ${assignmentError.message}` });
+        } catch (rollbackError: any) {
+          res.status(500).json({ 
+            error: `Critical error: Failed to assign staff and rollback failed: ${assignmentError.message}` 
+          });
+        }
       }
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -200,26 +209,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      const originalPatient = await storage.getPatient(req.params.id);
+      if (!originalPatient) {
+        return res.status(404).json({ error: "Patient not found" });
+      }
+      
+      const originalAssignments = await storage.getPatientStaffAssignments(req.params.id);
+      const originalDoctor = originalAssignments.find(a => a.assignment_role === 'Doctor');
+      const originalNurse = originalAssignments.find(a => a.assignment_role === 'Nurse');
+      
       const patient = await storage.updatePatient(req.params.id, validatedData);
       
-      if (doctor_id !== undefined) {
-        if (doctor_id) {
-          await storage.updatePatientStaffAssignment(req.params.id, 'Doctor', doctor_id);
-        } else {
-          await storage.removePatientStaffAssignment(req.params.id, 'Doctor');
+      try {
+        if (doctor_id !== undefined) {
+          if (doctor_id) {
+            await storage.updatePatientStaffAssignment(req.params.id, 'Doctor', doctor_id);
+          } else {
+            await storage.removePatientStaffAssignment(req.params.id, 'Doctor');
+          }
         }
-      }
-      if (nurse_id !== undefined) {
-        if (nurse_id) {
-          await storage.updatePatientStaffAssignment(req.params.id, 'Nurse', nurse_id);
-        } else {
-          await storage.removePatientStaffAssignment(req.params.id, 'Nurse');
+        if (nurse_id !== undefined) {
+          if (nurse_id) {
+            await storage.updatePatientStaffAssignment(req.params.id, 'Nurse', nurse_id);
+          } else {
+            await storage.removePatientStaffAssignment(req.params.id, 'Nurse');
+          }
         }
+        
+        res.json(patient);
+      } catch (assignmentError: any) {
+        try {
+          await storage.updatePatient(req.params.id, {
+            ipd_number: originalPatient.ipd_number,
+            patient_name: originalPatient.patient_name,
+            age: originalPatient.age,
+            gender: originalPatient.gender,
+            contact_number: originalPatient.contact_number,
+            address: originalPatient.address,
+            bed_number: originalPatient.bed_number,
+            ward: originalPatient.ward,
+            diagnosis: originalPatient.diagnosis,
+            admission_date: originalPatient.admission_date,
+            emergency_contact: originalPatient.emergency_contact,
+          });
+          
+          if (originalDoctor) {
+            await storage.updatePatientStaffAssignment(req.params.id, 'Doctor', originalDoctor.staff_id);
+          } else {
+            await storage.removePatientStaffAssignment(req.params.id, 'Doctor').catch(() => {});
+          }
+          
+          if (originalNurse) {
+            await storage.updatePatientStaffAssignment(req.params.id, 'Nurse', originalNurse.staff_id);
+          } else {
+            await storage.removePatientStaffAssignment(req.params.id, 'Nurse').catch(() => {});
+          }
+        } catch (rollbackError: any) {
+          return res.status(500).json({ 
+            error: `Critical error: Failed to update staff assignments and rollback failed: ${assignmentError.message}` 
+          });
+        }
+        res.status(500).json({ error: `Failed to update staff assignments: ${assignmentError.message}` });
       }
-      
-      res.json(patient);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: error.message });
     }
   });
 

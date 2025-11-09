@@ -97,8 +97,9 @@ The system uses a comprehensive PostgreSQL database with the following main tabl
 ### Patients (Protected)
 - `GET /api/patients?discharged=false` - List active patients
 - `GET /api/patients/:id` - Get patient details
-- `POST /api/patients` - Create new patient
-- `PATCH /api/patients/:id` - Update patient
+- `GET /api/patients/:id/details` - Get comprehensive patient details with staff, orders, notes, vitals
+- `POST /api/patients` - Create new patient (supports doctor_id, nurse_id)
+- `PATCH /api/patients/:id` - Update patient (supports doctor_id, nurse_id for staff reassignment)
 - `PATCH /api/patients/:id/discharge` - Discharge patient
 - `DELETE /api/patients/:id` - Delete patient
 
@@ -187,15 +188,28 @@ This starts both the Express backend (port 5000) and Vite frontend.
 #### 2. Patient Management Tab
 - Comprehensive patient table with all demographics
 - Search and filter capabilities
-- Add new patient modal with full form:
+- **Add new patient modal** with full form:
   - IPD number (unique identifier)
   - Personal info (name, age, gender, contact, address)
   - Bed assignment (bed number, ward)
   - Diagnosis and admission date
   - Emergency contact
-- Edit patient information
+  - **Doctor assignment dropdown** (select from staff with Doctor role)
+  - **Nurse assignment dropdown** (select from staff with Nurse role)
+- **Edit patient modal** with staff reassignment:
+  - Update all patient information
+  - Change assigned doctor (or remove assignment)
+  - Change assigned nurse (or remove assignment)
+- **Patient details modal** showing:
+  - Complete patient demographics
+  - Assigned healthcare team (doctor and nurse with contact info)
+  - All medication orders with completion status
+  - All procedure orders with completion status
+  - All investigation orders with results
+  - Nursing notes chronologically
+  - Recent vital signs
 - Discharge patient functionality
-- View patient treatment history
+- Delete patient functionality
 
 #### 3. Nursing Notes Tab
 - Chronological list of all nursing notes
@@ -245,28 +259,38 @@ All UI components use shadcn/ui built on Radix UI primitives:
 
 ### ✅ Completed
 - Complete backend API with authentication
-- Database schema with 15+ tables
+- Database schema with 15+ tables including patient-staff assignments
 - Supabase integration
 - Frontend component structure
 - Landing page with marketing content
 - Login page with JWT authentication
 - Admin dashboard layout with tabs
 - Header with notification bell and user menu
-- Mock data UI implementations
+- **Patient Management Features**:
+  - Add new patients with doctor/nurse assignment
+  - Edit patient information with staff reassignment
+  - Comprehensive patient details view with all related data
+  - Discharge patient functionality
+  - Patient listing and filtering
+- **Staff Assignment System**:
+  - Database schema with assignment_role field for Doctor/Nurse distinction
+  - Unique constraint ensuring one doctor and one nurse per patient
+  - API validation for staff IDs and roles
+  - Rollback mechanisms for data consistency
 
 ### 🚧 In Progress
-- Connecting frontend to backend API (Task 4)
-- Replacing mock data with real API calls
 - Timeline aggregation and bulletin board integration
+- Treatment order management UI
+- Real-time notifications via WebSocket
 
 ### 📋 TODO
-- Treatment order management UI
-- Patient creation and editing forms
-- Nursing notes CRUD functionality
-- Master data management UI
-- Vital signs tracking
-- Real-time notifications via WebSocket
-- Reports and analytics
+- Vital signs tracking UI
+- Reports and analytics dashboard
+- Mobile-responsive design improvements
+
+### 🔄 Future Enhancements
+- **Transaction Safety**: Consider migrating to database stored procedures for true atomic operations when creating/updating patients with staff assignments. Current implementation uses manual rollback logic which handles most cases but could benefit from native database transactions.
+- **Role-based Access Control**: Implement different permission levels for doctors, nurses, and administrators
 
 ## Development Notes
 
