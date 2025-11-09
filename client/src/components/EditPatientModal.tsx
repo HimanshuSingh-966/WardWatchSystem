@@ -5,30 +5,36 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Staff } from "@shared/schema";
+import type { Patient, Staff, PatientStaffAssignment } from "@shared/schema";
 
-interface AddPatientModalProps {
+interface EditPatientModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit?: (data: any) => void;
+  patient: Patient | null;
   staff?: Staff[];
+  assignments?: PatientStaffAssignment[];
 }
 
-export default function AddPatientModal({
+export default function EditPatientModal({
   open,
   onClose,
   onSubmit,
+  patient,
   staff = [],
-}: AddPatientModalProps) {
+  assignments = [],
+}: EditPatientModalProps) {
   const [doctorId, setDoctorId] = useState<string>("");
   const [nurseId, setNurseId] = useState<string>("");
 
   useEffect(() => {
-    if (!open) {
-      setDoctorId("");
-      setNurseId("");
+    if (patient && assignments.length >= 0) {
+      const doctorAssignment = assignments.find(a => a.assignment_role === 'Doctor');
+      const nurseAssignment = assignments.find(a => a.assignment_role === 'Nurse');
+      setDoctorId(doctorAssignment?.staff_id || "");
+      setNurseId(nurseAssignment?.staff_id || "");
     }
-  }, [open]);
+  }, [patient, assignments]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,11 +43,11 @@ export default function AddPatientModal({
     
     const submitData = {
       ...data,
-      doctor_id: doctorId || undefined,
-      nurse_id: nurseId || undefined,
+      doctor_id: doctorId || null,
+      nurse_id: nurseId || null,
     };
     
-    console.log('Submit patient:', submitData);
+    console.log('Update patient:', submitData);
     onSubmit?.(submitData);
     onClose();
   };
@@ -49,11 +55,13 @@ export default function AddPatientModal({
   const doctors = staff.filter(s => s.role === 'Doctor');
   const nurses = staff.filter(s => s.role === 'Nurse');
 
+  if (!patient) return null;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="modal-add-patient">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="modal-edit-patient">
         <DialogHeader>
-          <DialogTitle>Add New Patient</DialogTitle>
+          <DialogTitle>Edit Patient - {patient.patient_name}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit}>
@@ -64,6 +72,7 @@ export default function AddPatientModal({
                 <Input
                   id="ipdNumber"
                   name="ipdNumber"
+                  defaultValue={patient.ipd_number}
                   placeholder="IPD001"
                   required
                   data-testid="input-ipd-number"
@@ -75,6 +84,7 @@ export default function AddPatientModal({
                 <Input
                   id="name"
                   name="name"
+                  defaultValue={patient.patient_name}
                   placeholder="John Doe"
                   required
                   data-testid="input-name"
@@ -89,6 +99,7 @@ export default function AddPatientModal({
                   id="age"
                   name="age"
                   type="number"
+                  defaultValue={patient.age}
                   placeholder="65"
                   required
                   data-testid="input-age"
@@ -97,7 +108,7 @@ export default function AddPatientModal({
               
               <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
-                <Select name="gender" defaultValue="M">
+                <Select name="gender" defaultValue={patient.gender}>
                   <SelectTrigger data-testid="select-gender">
                     <SelectValue />
                   </SelectTrigger>
@@ -114,6 +125,7 @@ export default function AddPatientModal({
                 <Input
                   id="contactNumber"
                   name="contactNumber"
+                  defaultValue={patient.contact_number || ""}
                   placeholder="+1234567890"
                   data-testid="input-contact"
                 />
@@ -128,6 +140,7 @@ export default function AddPatientModal({
                     <SelectValue placeholder="Select doctor (optional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">None</SelectItem>
                     {doctors.map((doctor) => (
                       <SelectItem key={doctor.staff_id} value={doctor.staff_id}>
                         {doctor.staff_name}
@@ -144,6 +157,7 @@ export default function AddPatientModal({
                     <SelectValue placeholder="Select nurse (optional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">None</SelectItem>
                     {nurses.map((nurse) => (
                       <SelectItem key={nurse.staff_id} value={nurse.staff_id}>
                         {nurse.staff_name}
@@ -160,6 +174,7 @@ export default function AddPatientModal({
                 <Input
                   id="bed"
                   name="bed"
+                  defaultValue={patient.bed_number}
                   placeholder="A-101"
                   required
                   data-testid="input-bed"
@@ -168,7 +183,7 @@ export default function AddPatientModal({
               
               <div className="space-y-2">
                 <Label htmlFor="ward">Ward</Label>
-                <Select name="ward">
+                <Select name="ward" defaultValue={patient.ward}>
                   <SelectTrigger data-testid="select-ward">
                     <SelectValue placeholder="Select ward" />
                   </SelectTrigger>
@@ -188,6 +203,7 @@ export default function AddPatientModal({
               <Input
                 id="diagnosis"
                 name="diagnosis"
+                defaultValue={patient.diagnosis}
                 placeholder="Primary diagnosis"
                 required
                 data-testid="input-diagnosis"
@@ -200,6 +216,7 @@ export default function AddPatientModal({
                 id="admissionDate"
                 name="admissionDate"
                 type="date"
+                defaultValue={patient.admission_date.toString().split('T')[0]}
                 required
                 data-testid="input-admission-date"
               />
@@ -210,6 +227,7 @@ export default function AddPatientModal({
               <Textarea
                 id="address"
                 name="address"
+                defaultValue={patient.address || ""}
                 placeholder="Patient address"
                 rows={2}
                 data-testid="textarea-address"
@@ -221,6 +239,7 @@ export default function AddPatientModal({
               <Input
                 id="emergencyContact"
                 name="emergencyContact"
+                defaultValue={patient.emergency_contact || ""}
                 placeholder="Name and phone number"
                 data-testid="input-emergency-contact"
               />
@@ -232,7 +251,7 @@ export default function AddPatientModal({
               Cancel
             </Button>
             <Button type="submit" data-testid="button-submit">
-              Add Patient
+              Update Patient
             </Button>
           </DialogFooter>
         </form>

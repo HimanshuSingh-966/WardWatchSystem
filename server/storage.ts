@@ -2,6 +2,7 @@ import { supabase } from './db/supabase';
 import type { 
   Admin, InsertAdmin,
   Patient, InsertPatient,
+  PatientDetails,
   Department, InsertDepartment,
   Staff, InsertStaff,
   Medication, InsertMedication,
@@ -12,7 +13,8 @@ import type {
   InvestigationOrder, InsertInvestigationOrder,
   NursingNote, InsertNursingNote,
   VitalSign, InsertVitalSign,
-  Route, InsertRoute
+  Route, InsertRoute,
+  PatientStaffAssignment, InsertPatientStaffAssignment
 } from "@shared/schema";
 
 export interface IStorage {
@@ -25,11 +27,18 @@ export interface IStorage {
   // Patient methods
   getPatients(isDischargedFilter?: boolean): Promise<Patient[]>;
   getPatient(id: string): Promise<Patient | null>;
+  getPatientDetails(id: string): Promise<PatientDetails | null>;
   getPatientByIPD(ipdNumber: string): Promise<Patient | null>;
   createPatient(patient: InsertPatient): Promise<Patient>;
   updatePatient(id: string, patient: Partial<InsertPatient>): Promise<Patient>;
   dischargePatient(id: string): Promise<Patient>;
   deletePatient(id: string): Promise<void>;
+
+  // Patient Staff Assignment methods
+  getPatientStaffAssignments(patientId: string): Promise<PatientStaffAssignment[]>;
+  assignStaffToPatient(assignment: InsertPatientStaffAssignment): Promise<PatientStaffAssignment>;
+  updatePatientStaffAssignment(patientId: string, role: 'Doctor' | 'Nurse', staffId: string): Promise<PatientStaffAssignment>;
+  removePatientStaffAssignment(patientId: string, role: 'Doctor' | 'Nurse'): Promise<void>;
 
   // Department methods
   getDepartments(): Promise<Department[]>;
@@ -235,6 +244,87 @@ export class SupabaseStorage implements IStorage {
       .from('patients')
       .delete()
       .eq('patient_id', id);
+    
+    if (error) throw new Error(error.message);
+  }
+
+  async getPatientDetails(id: string): Promise<PatientDetails | null> {
+    const patient = await this.getPatient(id);
+    if (!patient) return null;
+
+    const [assignments, medOrders, procOrders, invOrders, notes, vitals] = await Promise.all([
+      this.getPatientStaffAssignments(id),
+      this.getMedicationOrders(id),
+      this.getProcedureOrders(id),
+      this.getInvestigationOrders(id),
+      this.getNursingNotes(id),
+      this.getVitalSigns(id),
+    ]);
+
+    const doctorAssignment = assignments.find(a => a.assignment_role === 'Doctor');
+    const nurseAssignment = assignments.find(a => a.assignment_role === 'Nurse');
+
+    const [doctor, nurse] = await Promise.all([
+      doctorAssignment ? this.getStaffMember(doctorAssignment.staff_id) : Promise.resolve(null),
+      nurseAssignment ? this.getStaffMember(nurseAssignment.staff_id) : Promise.resolve(null),
+    ]);
+
+    return {
+      ...patient,
+      doctor,
+      nurse,
+      medication_orders: medOrders,
+      procedure_orders: procOrders,
+      investigation_orders: invOrders,
+      nursing_notes: notes,
+      vital_signs: vitals,
+    } as PatientDetails;
+  }
+
+  async getPatientStaffAssignments(patientId: string): Promise<PatientStaffAssignment[]> {
+    const { data, error } = await supabase
+      .from('patient_staff_assignments')
+      .select('*')
+      .eq('patient_id', patientId);
+    
+    if (error) throw new Error(error.message);
+    return (data as PatientStaffAssignment[]) || [];
+  }
+
+  async assignStaffToPatient(assignment: InsertPatientStaffAssignment): Promise<PatientStaffAssignment> {
+    const { data, error } = await supabase
+      .from('patient_staff_assignments')
+      .insert([assignment])
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data as PatientStaffAssignment;
+  }
+
+  async updatePatientStaffAssignment(patientId: string, role: 'Doctor' | 'Nurse', staffId: string): Promise<PatientStaffAssignment> {
+    const { data, error } = await supabase
+      .from('patient_staff_assignments')
+      .upsert({
+        patient_id: patientId,
+        staff_id: staffId,
+        assignment_role: role,
+      }, {
+        onConflict: 'patient_id,assignment_role'
+      })
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data as PatientStaffAssignment;
+  }
+
+  async removePatientStaffAssignment(patientId: string, role: 'Doctor' | 'Nurse'): Promise<void> {
+    const { error } = await supabase
+      .from('patient_staff_assignments')
+      .delete()
+      .eq('patient_id', patientId)
+      .eq('assignment_role', role);
     
     if (error) throw new Error(error.message);
   }

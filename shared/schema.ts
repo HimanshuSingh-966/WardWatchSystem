@@ -351,3 +351,35 @@ export const notificationSchema = z.object({
 });
 
 export type Notification = z.infer<typeof notificationSchema>;
+
+// Patient Staff Assignments
+export const patientStaffAssignmentSchema = z.object({
+  assignment_id: z.string().uuid(),
+  patient_id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  assignment_role: z.enum(['Doctor', 'Nurse']),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
+export const insertPatientStaffAssignmentSchema = z.object({
+  patient_id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  assignment_role: z.enum(['Doctor', 'Nurse']),
+});
+
+export type PatientStaffAssignment = z.infer<typeof patientStaffAssignmentSchema>;
+export type InsertPatientStaffAssignment = z.infer<typeof insertPatientStaffAssignmentSchema>;
+
+// Extended Patient Details (with staff assignments and related data)
+export const patientDetailsSchema = patientSchema.extend({
+  doctor: staffSchema.nullable(),
+  nurse: staffSchema.nullable(),
+  medication_orders: z.array(medicationOrderSchema).optional(),
+  procedure_orders: z.array(procedureOrderSchema).optional(),
+  investigation_orders: z.array(investigationOrderSchema).optional(),
+  nursing_notes: z.array(nursingNoteSchema).optional(),
+  vital_signs: z.array(vitalSignSchema).optional(),
+});
+
+export type PatientDetails = z.infer<typeof patientDetailsSchema>;

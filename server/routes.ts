@@ -119,11 +119,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/patients/:id/details", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const patientDetails = await storage.getPatientDetails(req.params.id);
+      if (!patientDetails) {
+        return res.status(404).json({ error: "Patient not found" });
+      }
+      res.json(patientDetails);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/patients", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertPatientSchema.parse(req.body);
+      const { doctor_id, nurse_id, ...patientData } = req.body;
+      const validatedData = insertPatientSchema.parse(patientData);
+      
+      if (doctor_id) {
+        const doctor = await storage.getStaffMember(doctor_id);
+        if (!doctor) {
+          return res.status(400).json({ error: "Invalid doctor ID" });
+        }
+        if (doctor.role !== 'Doctor') {
+          return res.status(400).json({ error: "Staff member is not a doctor" });
+        }
+      }
+      
+      if (nurse_id) {
+        const nurse = await storage.getStaffMember(nurse_id);
+        if (!nurse) {
+          return res.status(400).json({ error: "Invalid nurse ID" });
+        }
+        if (nurse.role !== 'Nurse') {
+          return res.status(400).json({ error: "Staff member is not a nurse" });
+        }
+      }
+      
       const patient = await storage.createPatient(validatedData);
-      res.status(201).json(patient);
+      
+      try {
+        if (doctor_id) {
+          await storage.updatePatientStaffAssignment(patient.patient_id, 'Doctor', doctor_id);
+        }
+        if (nurse_id) {
+          await storage.updatePatientStaffAssignment(patient.patient_id, 'Nurse', nurse_id);
+        }
+        res.status(201).json(patient);
+      } catch (assignmentError: any) {
+        await storage.deletePatient(patient.patient_id);
+        throw new Error(`Failed to assign staff: ${assignmentError.message}`);
+      }
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -131,8 +177,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/patients/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertPatientSchema.partial().parse(req.body);
+      const { doctor_id, nurse_id, ...patientData } = req.body;
+      const validatedData = insertPatientSchema.partial().parse(patientData);
+      
+      if (doctor_id !== undefined && doctor_id) {
+        const doctor = await storage.getStaffMember(doctor_id);
+        if (!doctor) {
+          return res.status(400).json({ error: "Invalid doctor ID" });
+        }
+        if (doctor.role !== 'Doctor') {
+          return res.status(400).json({ error: "Staff member is not a doctor" });
+        }
+      }
+      
+      if (nurse_id !== undefined && nurse_id) {
+        const nurse = await storage.getStaffMember(nurse_id);
+        if (!nurse) {
+          return res.status(400).json({ error: "Invalid nurse ID" });
+        }
+        if (nurse.role !== 'Nurse') {
+          return res.status(400).json({ error: "Staff member is not a nurse" });
+        }
+      }
+      
       const patient = await storage.updatePatient(req.params.id, validatedData);
+      
+      if (doctor_id !== undefined) {
+        if (doctor_id) {
+          await storage.updatePatientStaffAssignment(req.params.id, 'Doctor', doctor_id);
+        } else {
+          await storage.removePatientStaffAssignment(req.params.id, 'Doctor');
+        }
+      }
+      if (nurse_id !== undefined) {
+        if (nurse_id) {
+          await storage.updatePatientStaffAssignment(req.params.id, 'Nurse', nurse_id);
+        } else {
+          await storage.removePatientStaffAssignment(req.params.id, 'Nurse');
+        }
+      }
+      
       res.json(patient);
     } catch (error: any) {
       res.status(400).json({ error: error.message });

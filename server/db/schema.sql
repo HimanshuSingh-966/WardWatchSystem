@@ -209,8 +209,10 @@ CREATE TABLE IF NOT EXISTS patient_staff_assignments (
   assignment_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   patient_id UUID NOT NULL REFERENCES patients(patient_id) ON DELETE CASCADE,
   staff_id UUID NOT NULL REFERENCES staff(staff_id) ON DELETE CASCADE,
+  assignment_role VARCHAR(50) NOT NULL CHECK (assignment_role IN ('Doctor', 'Nurse')),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(patient_id, staff_id)
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(patient_id, assignment_role)
 );
 
 -- Create indexes for better query performance
@@ -248,3 +250,4 @@ CREATE TRIGGER update_medication_orders_updated_at BEFORE UPDATE ON medication_o
 CREATE TRIGGER update_procedure_orders_updated_at BEFORE UPDATE ON procedure_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_investigation_orders_updated_at BEFORE UPDATE ON investigation_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_nursing_notes_updated_at BEFORE UPDATE ON nursing_notes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_patient_staff_assignments_updated_at BEFORE UPDATE ON patient_staff_assignments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

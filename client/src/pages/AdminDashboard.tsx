@@ -12,11 +12,13 @@ import NursingNotesTable, { NursingNote } from "@/components/NursingNotesTable";
 import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
 import AddPatientModal from "@/components/AddPatientModal";
+import EditPatientModal from "@/components/EditPatientModal";
+import PatientDetailsModal from "@/components/PatientDetailsModal";
 import AddNursingNoteModal from "@/components/AddNursingNoteModal";
 import DashboardClock from "@/components/DashboardClock";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import type { Patient as BackendPatient, NursingNote as BackendNursingNote, Staff } from "@shared/schema";
+import type { Patient as BackendPatient, NursingNote as BackendNursingNote, Staff, PatientDetails, PatientStaffAssignment } from "@shared/schema";
 
 export default function AdminDashboard() {
   const { admin, isLoading } = useAuth();
@@ -46,7 +48,10 @@ export default function AdminDashboard() {
   const [showBulletinBoard, setShowBulletinBoard] = useState(true);
   const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
+  const [showEditPatientModal, setShowEditPatientModal] = useState(false);
+  const [showPatientDetailsModal, setShowPatientDetailsModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
 
   // Fetch patients
@@ -76,6 +81,58 @@ export default function AdminDashboard() {
     dischargeDate: p.discharge_date ? new Date(p.discharge_date) : undefined,
   }));
 
+  // Fetch patient details
+  const { data: selectedPatientDetails, isLoading: patientDetailsLoading } = useQuery<PatientDetails>({
+    queryKey: ['/api/patients', selectedPatientId, 'details'],
+    queryFn: async () => {
+      if (!selectedPatientId) throw new Error('No patient selected');
+      const res = await fetch(`/api/patients/${selectedPatientId}/details`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch patient details');
+      return res.json();
+    },
+    enabled: !!selectedPatientId,
+  });
+
+  // Fetch patient staff assignments for editing
+  const { data: selectedPatientAssignments = [] } = useQuery<PatientStaffAssignment[]>({
+    queryKey: ['/api/patients', selectedPatientId, 'assignments'],
+    queryFn: async () => {
+      if (!selectedPatientId) return [];
+      const res = await fetch(`/api/patients/${selectedPatientId}/details`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (!res.ok) return [];
+      const details = await res.json();
+      const assignments: PatientStaffAssignment[] = [];
+      if (details.doctor) {
+        assignments.push({
+          assignment_id: '',
+          patient_id: selectedPatientId,
+          staff_id: details.doctor.staff_id,
+          assignment_role: 'Doctor' as const,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+      if (details.nurse) {
+        assignments.push({
+          assignment_id: '',
+          patient_id: selectedPatientId,
+          staff_id: details.nurse.staff_id,
+          assignment_role: 'Nurse' as const,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+      return assignments;
+    },
+    enabled: !!selectedPatientId,
+  });
+
+  const selectedPatient = backendPatients.find(p => p.patient_id === selectedPatientId);
+
   // Add patient mutation
   const addPatientMutation = useMutation({
     mutationFn: (data: any) => apiRequest('/api/patients', 'POST', {
@@ -90,10 +147,39 @@ export default function AdminDashboard() {
       diagnosis: data.diagnosis,
       admission_date: data.admissionDate,
       emergency_contact: data.emergencyContact || undefined,
+      doctor_id: data.doctor_id,
+      nurse_id: data.nurse_id,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/patients'] });
       toast({ title: "Success", description: "Patient added successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // Update patient mutation
+  const updatePatientMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiRequest(`/api/patients/${id}`, 'PATCH', {
+      ipd_number: data.ipdNumber,
+      patient_name: data.name,
+      age: parseInt(data.age),
+      gender: data.gender,
+      contact_number: data.contactNumber || undefined,
+      address: data.address || undefined,
+      bed_number: data.bed,
+      ward: data.ward,
+      diagnosis: data.diagnosis,
+      admission_date: data.admissionDate,
+      emergency_contact: data.emergencyContact || undefined,
+      doctor_id: data.doctor_id,
+      nurse_id: data.nurse_id,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/patients'] });
+      toast({ title: "Success", description: "Patient updated successfully" });
+      setSelectedPatientId(null);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -311,8 +397,14 @@ export default function AdminDashboard() {
                 ) : (
                   <PatientTable
                     patients={patients}
-                    onViewDetails={(id) => console.log('View patient:', id)}
-                    onEdit={(id) => console.log('Edit patient:', id)}
+                    onViewDetails={(id) => {
+                      setSelectedPatientId(id);
+                      setShowPatientDetailsModal(true);
+                    }}
+                    onEdit={(id) => {
+                      setSelectedPatientId(id);
+                      setShowEditPatientModal(true);
+                    }}
                     onDischarge={(id) => dischargePatientMutation.mutate(id)}
                   />
                 )}
@@ -379,6 +471,34 @@ export default function AdminDashboard() {
         open={showAddPatientModal}
         onClose={() => setShowAddPatientModal(false)}
         onSubmit={(data) => addPatientMutation.mutate(data)}
+        staff={staffList}
+      />
+
+      <EditPatientModal
+        open={showEditPatientModal}
+        onClose={() => {
+          setShowEditPatientModal(false);
+          setSelectedPatientId(null);
+        }}
+        onSubmit={(data) => {
+          if (selectedPatientId) {
+            updatePatientMutation.mutate({ id: selectedPatientId, data });
+          }
+        }}
+        patient={selectedPatient || null}
+        staff={staffList}
+        assignments={selectedPatientAssignments}
+      />
+
+      <PatientDetailsModal
+        open={showPatientDetailsModal}
+        onClose={() => {
+          setShowPatientDetailsModal(false);
+          setSelectedPatientId(null);
+        }}
+        patientId={selectedPatientId}
+        patientDetails={selectedPatientDetails || null}
+        isLoading={patientDetailsLoading}
       />
       
       <AddNursingNoteModal
