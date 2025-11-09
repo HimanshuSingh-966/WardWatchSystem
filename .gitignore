@@ -1,6 +1,29 @@
-node_modules
-dist
+# Node modules and build output
+node_modules/
+dist/
+replit.node_modules/
+
+# macOS and Replit files
 .DS_Store
-server/public
+*.replit
+*.local
+
+# Vite and config files
 vite.config.ts.*
 *.tar.gz
+
+# Server-related directories
+server/public/
+server/db/seed_data.sql
+server/db/seed.sql
+
+# Attachments and temporary assets
+attached_assests/
+
+# SQL and sample data
+sample_data.sql
+DATABASE_SETUP.md
+DEVELOPER_GUIDE.md
+
+# Environment files
+*.env
