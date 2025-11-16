@@ -764,17 +764,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
 
       // Get medications, procedures, and investigations for details
-      const [medications, procedures, investigations] = await Promise.all([
+      const [medications, procedures, investigations, staff] = await Promise.all([
         storage.getMedications(),
         storage.getProcedures(),
         storage.getInvestigations(),
+        storage.getStaff(),
       ]);
+
+      // Fetch all patient staff assignments
+      const patientAssignments = await Promise.all(
+        patients.map(p => storage.getPatientStaffAssignments(p.patient_id))
+      );
 
       // Create lookup maps for fast access
       const patientMap = new Map(patients.map(p => [p.patient_id, p]));
       const medicationMap = new Map(medications.map(m => [m.medication_id, m]));
       const procedureMap = new Map(procedures.map(p => [p.procedure_id, p]));
       const investigationMap = new Map(investigations.map(i => [i.investigation_id, i]));
+      const staffMap = new Map(staff.map(s => [s.staff_id, s]));
+
+      // Create patient-to-staff mapping
+      const patientStaffMap = new Map<string, { doctor: any; nurse: any }>();
+      patients.forEach((patient, index) => {
+        const assignments = patientAssignments[index];
+        const doctorAssignment = assignments.find(a => a.assignment_role === 'Doctor');
+        const nurseAssignment = assignments.find(a => a.assignment_role === 'Nurse');
+        
+        patientStaffMap.set(patient.patient_id, {
+          doctor: doctorAssignment ? staffMap.get(doctorAssignment.staff_id) : null,
+          nurse: nurseAssignment ? staffMap.get(nurseAssignment.staff_id) : null,
+        });
+      });
 
       // Combine all orders with enriched data
       const timeline: any[] = [];
@@ -782,10 +802,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       medicationOrders.forEach(order => {
         const patient = patientMap.get(order.patient_id);
         const medication = medicationMap.get(order.medication_id);
+        const staffInfo = patientStaffMap.get(order.patient_id);
         if (patient && medication) {
           timeline.push({
             time: order.scheduled_time,
             patient: {
+              id: patient.patient_id,
               ipdNumber: patient.ipd_number,
               name: patient.patient_name,
               age: patient.age,
@@ -793,6 +815,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bed: patient.bed_number,
               ward: patient.ward,
               diagnosis: patient.diagnosis,
+              doctor: staffInfo?.doctor?.staff_name || null,
+              nurse: staffInfo?.nurse?.staff_name || null,
             },
             treatment: {
               id: order.order_id,
@@ -809,11 +833,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       procedureOrders.forEach(order => {
         const patient = patientMap.get(order.patient_id);
         const procedure = procedureMap.get(order.procedure_id);
+        const staffInfo = patientStaffMap.get(order.patient_id);
         if (patient && procedure) {
           const time = new Date(order.scheduled_time).toTimeString().slice(0, 5);
           timeline.push({
             time,
             patient: {
+              id: patient.patient_id,
               ipdNumber: patient.ipd_number,
               name: patient.patient_name,
               age: patient.age,
@@ -821,6 +847,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bed: patient.bed_number,
               ward: patient.ward,
               diagnosis: patient.diagnosis,
+              doctor: staffInfo?.doctor?.staff_name || null,
+              nurse: staffInfo?.nurse?.staff_name || null,
             },
             treatment: {
               id: order.order_id,
@@ -837,11 +865,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       investigationOrders.forEach(order => {
         const patient = patientMap.get(order.patient_id);
         const investigation = investigationMap.get(order.investigation_id);
+        const staffInfo = patientStaffMap.get(order.patient_id);
         if (patient && investigation) {
           const time = new Date(order.scheduled_time).toTimeString().slice(0, 5);
           timeline.push({
             time,
             patient: {
+              id: patient.patient_id,
               ipdNumber: patient.ipd_number,
               name: patient.patient_name,
               age: patient.age,
@@ -849,6 +879,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               bed: patient.bed_number,
               ward: patient.ward,
               diagnosis: patient.diagnosis,
+              doctor: staffInfo?.doctor?.staff_name || null,
+              nurse: staffInfo?.nurse?.staff_name || null,
             },
             treatment: {
               id: order.order_id,

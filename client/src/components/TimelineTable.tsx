@@ -16,6 +16,7 @@ export interface TreatmentItem {
 export interface TimelineRow {
   time: string;
   patient: {
+    id?: string;
     ipdNumber: string;
     name: string;
     age: number;
@@ -23,6 +24,8 @@ export interface TimelineRow {
     bed: string;
     ward: string;
     diagnosis: string;
+    doctor?: string | null;
+    nurse?: string | null;
   };
   treatments: TreatmentItem[];
 }
@@ -48,14 +51,14 @@ const priorityColors = {
 };
 
 const patientColors = [
-  'bg-blue-50 dark:bg-blue-950/20',
-  'bg-purple-50 dark:bg-purple-950/20',
-  'bg-pink-50 dark:bg-pink-950/20',
-  'bg-orange-50 dark:bg-orange-950/20',
-  'bg-teal-50 dark:bg-teal-950/20',
-  'bg-indigo-50 dark:bg-indigo-950/20',
-  'bg-rose-50 dark:bg-rose-950/20',
-  'bg-cyan-50 dark:bg-cyan-950/20',
+  'bg-blue-200 dark:bg-blue-900/50',
+  'bg-purple-200 dark:bg-purple-900/50',
+  'bg-pink-200 dark:bg-pink-900/50',
+  'bg-orange-200 dark:bg-orange-900/50',
+  'bg-teal-200 dark:bg-teal-900/50',
+  'bg-indigo-200 dark:bg-indigo-900/50',
+  'bg-rose-200 dark:bg-rose-900/50',
+  'bg-cyan-200 dark:bg-cyan-900/50',
 ];
 
 export default function TimelineTable({
@@ -81,6 +84,8 @@ export default function TimelineTable({
             <TableHead className="w-24">Age/Gender</TableHead>
             <TableHead className="w-32">Bed</TableHead>
             <TableHead className="w-32">Ward</TableHead>
+            <TableHead className="w-40">Doctor</TableHead>
+            <TableHead className="w-40">Nurse</TableHead>
             <TableHead className="w-48">Diagnosis</TableHead>
             <TableHead>Treatments</TableHead>
             <TableHead className="w-16">Done</TableHead>
@@ -95,7 +100,7 @@ export default function TimelineTable({
             return (
             <TableRow 
               key={rowIndex}
-              className={`${allCompleted ? 'bg-green-50 dark:bg-green-950/30' : patientBgColor} ${rowIndex > 0 && data[rowIndex - 1].time !== row.time ? 'border-t-2 border-t-border' : ''}`}
+              className={`${allCompleted ? 'bg-green-200 dark:bg-green-900/50' : patientBgColor} ${rowIndex > 0 && data[rowIndex - 1].time !== row.time ? 'border-t-2 border-t-border' : ''}`}
             >
               <TableCell className="font-semibold font-mono text-sm">{row.time}</TableCell>
               <TableCell className="font-mono text-sm">{row.patient.ipdNumber}</TableCell>
@@ -105,6 +110,8 @@ export default function TimelineTable({
               </TableCell>
               <TableCell className="text-sm">{row.patient.bed}</TableCell>
               <TableCell className="text-sm">{row.patient.ward}</TableCell>
+              <TableCell className="text-sm font-medium">{row.patient.doctor || 'N/A'}</TableCell>
+              <TableCell className="text-sm font-medium">{row.patient.nurse || 'N/A'}</TableCell>
               <TableCell className="text-sm text-muted-foreground">{row.patient.diagnosis}</TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-2">
