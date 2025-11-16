@@ -751,6 +751,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== Treatment History Routes ====================
   
+  app.get("/api/treatment-history/all", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const history = await storage.getAllPatientsWithHistory();
+      res.json(history);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
   app.get("/api/treatment-history/:patientId", authMiddleware, async (req: AuthRequest, res) => {
     try {
       const history = await storage.getTreatmentHistory(req.params.patientId);

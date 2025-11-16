@@ -38,10 +38,12 @@ export default function AdminDashboard() {
     }
   }, [admin, isLoading, setLocation]);
 
-  // Redirect to master data page when master tab is clicked
+  // Redirect to separate pages when specific tabs are clicked
   useEffect(() => {
     if (activeTab === 'master') {
       setLocation('/admin/master-data');
+    } else if (activeTab === 'history') {
+      setLocation('/admin/treatment-history');
     }
   }, [activeTab, setLocation]);
   

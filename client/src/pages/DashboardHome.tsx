@@ -14,6 +14,7 @@ import {
   Activity, 
   UserCog, 
   Building, 
+  History,
   Database 
 } from "lucide-react";
 
@@ -88,6 +89,13 @@ const sections: DashboardSection[] = [
     icon: Building,
     path: "/admin/departments",
     color: "text-cyan-500",
+  },
+  {
+    id: "history",
+    title: "Treatment History",
+    icon: History,
+    path: "/admin/treatment-history",
+    color: "text-violet-500",
   },
   {
     id: "master",

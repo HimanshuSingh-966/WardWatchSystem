@@ -118,6 +118,7 @@ export interface IStorage {
 
   // Treatment History methods
   getTreatmentHistory(patientId: string): Promise<TreatmentHistory[]>;
+  getAllPatientsWithHistory(): Promise<any[]>;
 }
 
 export class SupabaseStorage implements IStorage {
@@ -937,6 +938,33 @@ export class SupabaseStorage implements IStorage {
     
     if (error) throw new Error(error.message);
     return data as TreatmentHistory[];
+  }
+
+  async getAllPatientsWithHistory(): Promise<any[]> {
+    const { data: patients, error: patientsError } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('is_discharged', false)
+      .order('admission_date', { ascending: false });
+    
+    if (patientsError) throw new Error(patientsError.message);
+    
+    const patientsWithHistory = await Promise.all(
+      (patients || []).map(async (patient) => {
+        const { data: history, error: historyError } = await supabase
+          .from('treatment_history')
+          .select('*')
+          .eq('patient_id', patient.patient_id)
+          .order('completed_at', { ascending: false });
+        
+        return {
+          ...patient,
+          history: history || []
+        };
+      })
+    );
+    
+    return patientsWithHistory;
   }
 }
 

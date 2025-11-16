@@ -17,6 +17,7 @@ import VitalSignsPage from "@/pages/VitalSignsPage";
 import StaffPage from "@/pages/StaffPage";
 import DepartmentsPage from "@/pages/DepartmentsPage";
 import MasterData from "@/pages/MasterData";
+import TreatmentHistoryPage from "@/pages/TreatmentHistoryPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/admin/staff" component={StaffPage} />
       <Route path="/admin/departments" component={DepartmentsPage} />
       <Route path="/admin/master-data" component={MasterData} />
+      <Route path="/admin/treatment-history" component={TreatmentHistoryPage} />
       <Route component={NotFound} />
     </Switch>
   );

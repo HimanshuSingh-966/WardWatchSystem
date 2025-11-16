@@ -77,9 +77,7 @@ export default function MedicationsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      return apiRequest(`/api/medication-orders/${orderId}`, {
-        method: 'DELETE',
-      });
+      return apiRequest('DELETE', `/api/medication-orders/${orderId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
@@ -100,9 +98,7 @@ export default function MedicationsPage() {
 
   const completeMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      return apiRequest(`/api/medication-orders/${orderId}/complete`, {
-        method: 'PATCH',
-      });
+      return apiRequest('PATCH', `/api/medication-orders/${orderId}/complete`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
@@ -121,11 +117,11 @@ export default function MedicationsPage() {
     },
   });
 
-  const handleDeleteTreatment = (id: string) => {
+  const handleDeleteTreatment = (id: string, type: 'medication' | 'procedure' | 'investigation') => {
     deleteMutation.mutate(id);
   };
 
-  const handleToggleComplete = (id: string) => {
+  const handleToggleComplete = (id: string, type: 'medication' | 'procedure' | 'investigation') => {
     completeMutation.mutate(id);
   };
 

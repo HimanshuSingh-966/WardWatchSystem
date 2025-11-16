@@ -10,6 +10,7 @@ export type DashboardTab =
   | "vitals" 
   | "staff" 
   | "departments" 
+  | "history"
   | "master";
 
 interface TabNavigationProps {
@@ -27,6 +28,7 @@ const tabs = [
   { value: "vitals" as const, label: "Vital Signs" },
   { value: "staff" as const, label: "Staff" },
   { value: "departments" as const, label: "Departments" },
+  { value: "history" as const, label: "Treatment History" },
   { value: "master" as const, label: "Master Data" },
 ];
 

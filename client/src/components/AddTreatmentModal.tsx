@@ -61,10 +61,7 @@ export default function AddTreatmentModal({
 
   const createMedicationOrder = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('/api/medication-orders', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return apiRequest('POST', '/api/medication-orders', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
@@ -79,10 +76,7 @@ export default function AddTreatmentModal({
 
   const createProcedureOrder = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('/api/procedure-orders', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return apiRequest('POST', '/api/procedure-orders', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
@@ -97,10 +91,7 @@ export default function AddTreatmentModal({
 
   const createInvestigationOrder = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('/api/investigation-orders', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return apiRequest('POST', '/api/investigation-orders', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });

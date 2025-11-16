@@ -34,8 +34,8 @@ interface TimelineTableProps {
   data: TimelineRow[];
   onAddTreatment?: (time: string, patientId: string) => void;
   onEditTreatment?: (treatmentId: string) => void;
-  onDeleteTreatment?: (treatmentId: string) => void;
-  onToggleComplete?: (treatmentId: string) => void;
+  onDeleteTreatment?: ((treatmentId: string) => void) | ((treatmentId: string, treatmentType: 'medication' | 'procedure' | 'investigation') => void);
+  onToggleComplete?: ((treatmentId: string) => void) | ((treatmentId: string, treatmentType: 'medication' | 'procedure' | 'investigation') => void);
 }
 
 const typeIcons = {
@@ -143,7 +143,7 @@ export default function TimelineTable({
                   <div key={treatment.id} className="mb-1">
                     <Checkbox
                       checked={treatment.isCompleted}
-                      onCheckedChange={() => onToggleComplete?.(treatment.id)}
+                      onCheckedChange={() => onToggleComplete?.(treatment.id, treatment.type)}
                       data-testid={`checkbox-complete-${treatment.id}`}
                     />
                   </div>
@@ -170,7 +170,7 @@ export default function TimelineTable({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => row.treatments[0] && onDeleteTreatment?.(row.treatments[0].id)}
+                    onClick={() => row.treatments[0] && onDeleteTreatment?.(row.treatments[0].id, row.treatments[0].type)}
                     data-testid={`button-delete-${rowIndex}`}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />

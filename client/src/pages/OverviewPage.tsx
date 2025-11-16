@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation, Link } from "wouter";
 import AdminHeader from "@/components/AdminHeader";
@@ -8,12 +8,14 @@ import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
 import DashboardClock from "@/components/DashboardClock";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { ArrowLeft, Plus } from "lucide-react";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OverviewPage() {
   const { admin, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [showBulletinBoard, setShowBulletinBoard] = useState(true);
   const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
   const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
@@ -68,6 +70,68 @@ export default function OverviewPage() {
     queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
   };
 
+  const completeTreatmentMutation = useMutation({
+    mutationFn: async ({ id, type }: { id: string; type: 'medication' | 'procedure' | 'investigation' }) => {
+      const endpoint = type === 'medication' 
+        ? `/api/medication-orders/${id}/complete`
+        : type === 'procedure'
+        ? `/api/procedure-orders/${id}/complete`
+        : `/api/investigation-orders/${id}/complete`;
+      
+      return apiRequest('PATCH', endpoint);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending'] });
+      toast({
+        title: "Treatment completed",
+        description: "The treatment has been marked as complete.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to complete treatment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleToggleComplete = (treatmentId: string, treatmentType: 'medication' | 'procedure' | 'investigation') => {
+    completeTreatmentMutation.mutate({ id: treatmentId, type: treatmentType });
+  };
+
+  const deleteTreatmentMutation = useMutation({
+    mutationFn: async ({ id, type }: { id: string; type: 'medication' | 'procedure' | 'investigation' }) => {
+      const endpoint = type === 'medication' 
+        ? `/api/medication-orders/${id}`
+        : type === 'procedure'
+        ? `/api/procedure-orders/${id}`
+        : `/api/investigation-orders/${id}`;
+      
+      return apiRequest('DELETE', endpoint);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending'] });
+      toast({
+        title: "Treatment deleted",
+        description: "The treatment has been removed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete treatment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteTreatment = (treatmentId: string, treatmentType: 'medication' | 'procedure' | 'investigation') => {
+    deleteTreatmentMutation.mutate({ id: treatmentId, type: treatmentType });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {showBulletinBoard && bulletinItems.length > 0 && (
@@ -98,7 +162,16 @@ export default function OverviewPage() {
             <DashboardClock />
             
             <div className="mt-8">
-              <h2 className="text-2xl font-semibold text-foreground mb-6">Treatment Timeline</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold text-foreground">Treatment Timeline</h2>
+                <Button 
+                  onClick={() => setShowAddTreatmentModal(true)}
+                  data-testid="button-add-treatment"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Treatment
+                </Button>
+              </div>
               {timelineLoading ? (
                 <div className="text-center py-12 text-muted-foreground">Loading timeline...</div>
               ) : timelineError ? (
@@ -108,8 +181,8 @@ export default function OverviewPage() {
                   data={timelineData}
                   onAddTreatment={handleAddTreatment}
                   onEditTreatment={(id) => console.log('Edit treatment:', id)}
-                  onDeleteTreatment={(id) => console.log('Delete treatment:', id)}
-                  onToggleComplete={(id) => console.log('Toggle complete:', id)}
+                  onDeleteTreatment={handleDeleteTreatment}
+                  onToggleComplete={handleToggleComplete}
                 />
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
