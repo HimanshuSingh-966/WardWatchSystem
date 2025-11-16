@@ -117,24 +117,24 @@ ON CONFLICT DO NOTHING;
 
 -- Insert Staff Members
 INSERT INTO staff (staff_name, role, contact_number, email) VALUES
-  ('Dr. Sarah Williams', 'Doctor', '+1-555-0101', 'dr.williams@hospital.com'),
-  ('Dr. Michael Chen', 'Doctor', '+1-555-0102', 'dr.chen@hospital.com'),
-  ('Dr. Priya Sharma', 'Doctor', '+1-555-0103', 'dr.sharma@hospital.com'),
-  ('Dr. James Anderson', 'Doctor', '+1-555-0104', 'dr.anderson@hospital.com'),
-  ('Dr. Emily Martinez', 'Doctor', '+1-555-0105', 'dr.martinez@hospital.com'),
-  ('Dr. Robert Thompson', 'Doctor', '+1-555-0106', 'dr.thompson@hospital.com'),
-  ('Dr. Lisa Park', 'Doctor', '+1-555-0107', 'dr.park@hospital.com'),
-  ('Dr. David Kumar', 'Doctor', '+1-555-0108', 'dr.kumar@hospital.com'),
-  ('Nurse Emily Brown', 'Nurse', '+1-555-0201', 'nurse.brown@hospital.com'),
-  ('Nurse Robert Wilson', 'Nurse', '+1-555-0202', 'nurse.wilson@hospital.com'),
-  ('Nurse Maria Garcia', 'Nurse', '+1-555-0203', 'nurse.garcia@hospital.com'),
-  ('Nurse David Taylor', 'Nurse', '+1-555-0204', 'nurse.taylor@hospital.com'),
-  ('Nurse Lisa Martinez', 'Nurse', '+1-555-0205', 'nurse.martinez@hospital.com'),
-  ('Nurse John Thompson', 'Nurse', '+1-555-0206', 'nurse.thompson@hospital.com'),
-  ('Nurse Sarah Johnson', 'Nurse', '+1-555-0207', 'nurse.johnson@hospital.com'),
-  ('Nurse Kevin Lee', 'Nurse', '+1-555-0208', 'nurse.lee@hospital.com'),
-  ('Nurse Amanda White', 'Nurse', '+1-555-0209', 'nurse.white@hospital.com'),
-  ('Nurse Daniel Harris', 'Nurse', '+1-555-0210', 'nurse.harris@hospital.com')
+  ('Dr. Priya Sharma', 'Doctor', '+91-98100-01001', 'dr.priya@hospital.com'),
+  ('Dr. Rajesh Kumar', 'Doctor', '+91-98100-01002', 'dr.rajesh@hospital.com'),
+  ('Dr. Anjali Patel', 'Doctor', '+91-98100-01003', 'dr.anjali@hospital.com'),
+  ('Dr. Arjun Singh', 'Doctor', '+91-98100-01004', 'dr.arjun@hospital.com'),
+  ('Dr. Sneha Reddy', 'Doctor', '+91-98100-01005', 'dr.sneha@hospital.com'),
+  ('Dr. Vikram Mehta', 'Doctor', '+91-98100-01006', 'dr.vikram@hospital.com'),
+  ('Dr. Kavita Nair', 'Doctor', '+91-98100-01007', 'dr.kavita@hospital.com'),
+  ('Dr. Arun Desai', 'Doctor', '+91-98100-01008', 'dr.arun@hospital.com'),
+  ('Nurse Sunita Verma', 'Nurse', '+91-98100-02001', 'nurse.sunita@hospital.com'),
+  ('Nurse Ramesh Iyer', 'Nurse', '+91-98100-02002', 'nurse.ramesh@hospital.com'),
+  ('Nurse Pooja Gupta', 'Nurse', '+91-98100-02003', 'nurse.pooja@hospital.com'),
+  ('Nurse Suresh Rao', 'Nurse', '+91-98100-02004', 'nurse.suresh@hospital.com'),
+  ('Nurse Lakshmi Menon', 'Nurse', '+91-98100-02005', 'nurse.lakshmi@hospital.com'),
+  ('Nurse Manoj Pillai', 'Nurse', '+91-98100-02006', 'nurse.manoj@hospital.com'),
+  ('Nurse Deepa Joshi', 'Nurse', '+91-98100-02007', 'nurse.deepa@hospital.com'),
+  ('Nurse Kiran Bhat', 'Nurse', '+91-98100-02008', 'nurse.kiran@hospital.com'),
+  ('Nurse Meera Kulkarni', 'Nurse', '+91-98100-02009', 'nurse.meera@hospital.com'),
+  ('Nurse Anil Shetty', 'Nurse', '+91-98100-02010', 'nurse.anil@hospital.com')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -145,9 +145,9 @@ ON CONFLICT DO NOTHING;
 -- Default password: admin123
 -- Hash generated using bcrypt with 10 rounds
 INSERT INTO admins (username, password_hash, full_name, email, contact_number) VALUES
-  ('admin', '$2b$10$K7L1OwyWdYKxXNnXZ5rXO.5aYJmH4QIf9JqBmYRZ7ZeYQZ7ZeYQZ7e', 'System Administrator', 'admin@hospital.com', '+1-555-0001'),
-  ('nurse1', '$2b$10$K7L1OwyWdYKxXNnXZ5rXO.5aYJmH4QIf9JqBmYRZ7ZeYQZ7ZeYQZ7e', 'Emily Brown', 'emily.brown@hospital.com', '+1-555-0201'),
-  ('doctor1', '$2b$10$K7L1OwyWdYKxXNnXZ5rXO.5aYJmH4QIf9JqBmYRZ7ZeYQZ7ZeYQZ7e', 'Dr. Sarah Williams', 'sarah.williams@hospital.com', '+1-555-0101')
+  ('admin', '$2b$10$K7L1OwyWdYKxXNnXZ5rXO.5aYJmH4QIf9JqBmYRZ7ZeYQZ7ZeYQZ7e', 'System Administrator', 'admin@hospital.com', '+91-98100-00001'),
+  ('nurse1', '$2b$10$K7L1OwyWdYKxXNnXZ5rXO.5aYJmH4QIf9JqBmYRZ7ZeYQZ7ZeYQZ7e', 'Sunita Verma', 'sunita.verma@hospital.com', '+91-98100-02001'),
+  ('doctor1', '$2b$10$K7L1OwyWdYKxXNnXZ5rXO.5aYJmH4QIf9JqBmYRZ7ZeYQZ7ZeYQZ7e', 'Dr. Priya Sharma', 'priya.sharma@hospital.com', '+91-98100-01001')
 ON CONFLICT (username) DO NOTHING;
 
 -- ============================================================
@@ -156,16 +156,16 @@ ON CONFLICT (username) DO NOTHING;
 
 -- Insert Sample Patients (Mix of active and discharged)
 INSERT INTO patients (ipd_number, patient_name, age, gender, contact_number, address, bed_number, ward, diagnosis, admission_date, is_discharged, discharge_date, emergency_contact) VALUES
-  ('IPD001', 'John Smith', 45, 'M', '+1-555-1001', '123 Main St, Springfield, IL 62701', 'A101', 'General Medicine', 'Type 2 Diabetes with Hypertension', '2024-11-10', false, NULL, '+1-555-1002'),
-  ('IPD002', 'Mary Johnson', 62, 'F', '+1-555-2001', '456 Oak Ave, Riverside, CA 92501', 'B203', 'Cardiology', 'Acute Myocardial Infarction', '2024-11-12', false, NULL, '+1-555-2002'),
-  ('IPD003', 'Robert Davis', 35, 'M', '+1-555-3001', '789 Pine Rd, Lakeside, FL 33801', 'C105', 'Surgery', 'Post-Appendectomy', '2024-11-14', false, NULL, '+1-555-3002'),
-  ('IPD004', 'Patricia Miller', 28, 'F', '+1-555-4001', '321 Elm St, Hilltop, TX 75001', 'D201', 'ICU', 'Severe Pneumonia - Recovered', '2024-10-20', true, '2024-11-05', '+1-555-4002'),
-  ('IPD005', 'James Wilson', 55, 'M', '+1-555-5001', '654 Maple Dr, Greenwood, WA 98001', 'B108', 'Orthopedics', 'Fractured Femur - Discharged', '2024-10-15', true, '2024-11-01', '+1-555-5002'),
-  ('IPD006', 'Linda Martinez', 71, 'F', '+1-555-6001', '987 Cedar Ln, Mountain View, CO 80401', 'A205', 'Neurology', 'Ischemic Stroke', '2024-11-13', false, NULL, '+1-555-6002'),
-  ('IPD007', 'William Brown', 52, 'M', '+1-555-7001', '147 Birch St, Oceanside, NC 28401', 'C302', 'Cardiology', 'Congestive Heart Failure', '2024-11-11', false, NULL, '+1-555-7002'),
-  ('IPD008', 'Jennifer Garcia', 39, 'F', '+1-555-8001', '258 Spruce Ave, Lakewood, OH 44107', 'B104', 'General Medicine', 'Acute Gastroenteritis', '2024-11-15', false, NULL, '+1-555-8002'),
-  ('IPD009', 'Michael Rodriguez', 48, 'M', '+1-555-9001', '369 Willow Ct, Riverside, AZ 85001', 'A308', 'Surgery', 'Post-Cholecystectomy', '2024-11-09', false, NULL, '+1-555-9002'),
-  ('IPD010', 'Elizabeth Taylor', 67, 'F', '+1-555-1011', '741 Aspen Dr, Hillside, MI 48001', 'C201', 'Oncology', 'Breast Cancer - Chemotherapy', '2024-11-08', false, NULL, '+1-555-1012')
+  ('IPD001', 'Ramesh Kumar', 45, 'M', '+91-98765-43210', '15/A, MG Road, Mumbai, Maharashtra 400001', 'A101', 'General Medicine', 'Type 2 Diabetes with Hypertension', '2024-11-10', false, NULL, '+91-98765-43211'),
+  ('IPD002', 'Savitri Devi', 62, 'F', '+91-98765-43220', '42, Sector 15, Noida, UP 201301', 'B203', 'Cardiology', 'Acute Myocardial Infarction', '2024-11-12', false, NULL, '+91-98765-43221'),
+  ('IPD003', 'Vikram Singh', 35, 'M', '+91-98765-43230', '78, Brigade Road, Bangalore, Karnataka 560001', 'C105', 'Surgery', 'Post-Appendectomy', '2024-11-14', false, NULL, '+91-98765-43231'),
+  ('IPD004', 'Anita Deshmukh', 28, 'F', '+91-98765-43240', '23, Park Street, Kolkata, West Bengal 700016', 'D201', 'ICU', 'Severe Pneumonia - Recovered', '2024-10-20', true, '2024-11-05', '+91-98765-43241'),
+  ('IPD005', 'Sunil Patil', 55, 'M', '+91-98765-43250', '56, FC Road, Pune, Maharashtra 411004', 'B108', 'Orthopedics', 'Fractured Femur - Discharged', '2024-10-15', true, '2024-11-01', '+91-98765-43251'),
+  ('IPD006', 'Lakshmi Iyer', 71, 'F', '+91-98765-43260', '89, Anna Salai, Chennai, Tamil Nadu 600002', 'A205', 'Neurology', 'Ischemic Stroke', '2024-11-13', false, NULL, '+91-98765-43261'),
+  ('IPD007', 'Ashok Reddy', 52, 'M', '+91-98765-43270', '34, Banjara Hills, Hyderabad, Telangana 500034', 'C302', 'Cardiology', 'Congestive Heart Failure', '2024-11-11', false, NULL, '+91-98765-43271'),
+  ('IPD008', 'Priya Menon', 39, 'F', '+91-98765-43280', '67, Marine Drive, Kochi, Kerala 682031', 'B104', 'General Medicine', 'Acute Gastroenteritis', '2024-11-15', false, NULL, '+91-98765-43281'),
+  ('IPD009', 'Amit Joshi', 48, 'M', '+91-98765-43290', '12, Civil Lines, Jaipur, Rajasthan 302006', 'A308', 'Surgery', 'Post-Cholecystectomy', '2024-11-09', false, NULL, '+91-98765-43291'),
+  ('IPD010', 'Geeta Agarwal', 67, 'F', '+91-98765-43300', '45, Hazratganj, Lucknow, UP 226001', 'C201', 'Oncology', 'Breast Cancer - Chemotherapy', '2024-11-08', false, NULL, '+91-98765-43301')
 ON CONFLICT (ipd_number) DO NOTHING;
 
 -- ============================================================
@@ -226,15 +226,15 @@ BEGIN
   SELECT patient_id INTO v_patient9_id FROM patients WHERE ipd_number = 'IPD009' LIMIT 1;
   SELECT patient_id INTO v_patient10_id FROM patients WHERE ipd_number = 'IPD010' LIMIT 1;
   
-  SELECT staff_id INTO v_doctor1_id FROM staff WHERE staff_name = 'Dr. Sarah Williams' LIMIT 1;
-  SELECT staff_id INTO v_doctor2_id FROM staff WHERE staff_name = 'Dr. Michael Chen' LIMIT 1;
-  SELECT staff_id INTO v_doctor3_id FROM staff WHERE staff_name = 'Dr. Priya Sharma' LIMIT 1;
-  SELECT staff_id INTO v_doctor4_id FROM staff WHERE staff_name = 'Dr. James Anderson' LIMIT 1;
+  SELECT staff_id INTO v_doctor1_id FROM staff WHERE staff_name = 'Dr. Priya Sharma' LIMIT 1;
+  SELECT staff_id INTO v_doctor2_id FROM staff WHERE staff_name = 'Dr. Rajesh Kumar' LIMIT 1;
+  SELECT staff_id INTO v_doctor3_id FROM staff WHERE staff_name = 'Dr. Anjali Patel' LIMIT 1;
+  SELECT staff_id INTO v_doctor4_id FROM staff WHERE staff_name = 'Dr. Arjun Singh' LIMIT 1;
   
-  SELECT staff_id INTO v_nurse1_id FROM staff WHERE staff_name = 'Nurse Emily Brown' LIMIT 1;
-  SELECT staff_id INTO v_nurse2_id FROM staff WHERE staff_name = 'Nurse Robert Wilson' LIMIT 1;
-  SELECT staff_id INTO v_nurse3_id FROM staff WHERE staff_name = 'Nurse Maria Garcia' LIMIT 1;
-  SELECT staff_id INTO v_nurse4_id FROM staff WHERE staff_name = 'Nurse David Taylor' LIMIT 1;
+  SELECT staff_id INTO v_nurse1_id FROM staff WHERE staff_name = 'Nurse Sunita Verma' LIMIT 1;
+  SELECT staff_id INTO v_nurse2_id FROM staff WHERE staff_name = 'Nurse Ramesh Iyer' LIMIT 1;
+  SELECT staff_id INTO v_nurse3_id FROM staff WHERE staff_name = 'Nurse Pooja Gupta' LIMIT 1;
+  SELECT staff_id INTO v_nurse4_id FROM staff WHERE staff_name = 'Nurse Suresh Rao' LIMIT 1;
   
   SELECT medication_id INTO v_med_paracetamol FROM medications WHERE medication_name = 'Paracetamol' LIMIT 1;
   SELECT medication_id INTO v_med_insulin FROM medications WHERE medication_name = 'Insulin Glargine' LIMIT 1;
