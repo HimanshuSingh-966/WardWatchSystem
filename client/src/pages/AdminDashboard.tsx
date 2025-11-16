@@ -278,24 +278,32 @@ export default function AdminDashboard() {
     }
   });
 
-  // Transform timeline data to bulletin items for upcoming treatments
-  const bulletinItems: BulletinItem[] = timelineData
-    .flatMap((row: any) => 
-      row.treatments.map((treatment: any) => ({
-        id: treatment.id,
-        time: row.time,
-        patientName: row.patient.name,
-        ipdNumber: row.patient.ipdNumber,
-        treatmentType: treatment.type,
-        treatmentName: treatment.name,
-        details: treatment.details,
-        priority: treatment.priority,
-        isOverdue: treatment.isOverdue || false,
-        bedNumber: row.patient.bed,
-      }))
-    )
-    .filter((item: any) => !item.isCompleted)
-    .slice(0, 10); // Show top 10 upcoming items
+  // Fetch pending notifications (poll every 60 seconds)
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['/api/notifications/pending'],
+    queryFn: async () => {
+      const res = await fetch('/api/notifications/pending', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch notifications');
+      return res.json();
+    },
+    refetchInterval: 60000, // Refetch every 60 seconds
+  });
+
+  // Transform notifications to bulletin items
+  const bulletinItems: BulletinItem[] = notifications.map((notif: any) => ({
+    id: notif.id,
+    time: notif.scheduledTime,
+    patientName: notif.patientName,
+    ipdNumber: notif.ipdNumber,
+    treatmentType: notif.treatmentType,
+    treatmentName: notif.treatmentName,
+    details: notif.details,
+    priority: notif.priority,
+    isOverdue: notif.isOverdue,
+    bedNumber: notif.bedNumber,
+  }));
 
   const handleAddTreatment = (time: string, patientId: string) => {
     setModalDefaults({ time, patient: patientId });
