@@ -115,7 +115,12 @@ export default function AddTreatmentModal({
     const formData = new FormData(e.target as HTMLFormElement);
     const time = formData.get('time') as string;
     const notes = formData.get('notes') as string;
-    const startDate = new Date().toISOString().split('T')[0];
+    
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const startDate = `${year}-${month}-${day}`;
 
     if (treatmentType === 'medication') {
       const dosage = formData.get('dosage') as string;
@@ -132,24 +137,20 @@ export default function AddTreatmentModal({
         notes,
       });
     } else if (treatmentType === 'procedure') {
-      const scheduledDateTime = new Date();
-      const [hours, minutes] = time.split(':');
-      scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      const scheduledDateTime = `${startDate}T${time}:00`;
       createProcedureOrder.mutate({
         patient_id: selectedPatient,
         procedure_id: selectedProcedure,
-        scheduled_time: scheduledDateTime.toISOString(),
+        scheduled_time: scheduledDateTime,
         priority,
         notes,
       });
     } else if (treatmentType === 'investigation') {
-      const scheduledDateTime = new Date();
-      const [hours, minutes] = time.split(':');
-      scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      const scheduledDateTime = `${startDate}T${time}:00`;
       createInvestigationOrder.mutate({
         patient_id: selectedPatient,
         investigation_id: selectedInvestigation,
-        scheduled_time: scheduledDateTime.toISOString(),
+        scheduled_time: scheduledDateTime,
         priority,
         notes,
       });
