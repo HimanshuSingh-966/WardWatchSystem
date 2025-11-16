@@ -376,11 +376,11 @@ BEGIN
   -- Add some notifications for upcoming treatments
   INSERT INTO notification_queue (patient_id, treatment_type, order_id, scheduled_time, message, is_acknowledged) 
   SELECT 
-    patient_id,
+    mo.patient_id,
     'medication'::VARCHAR(50),
-    order_id,
-    CONCAT(start_date, ' ', scheduled_time)::TIMESTAMP,
-    CONCAT('Medication due: ', m.medication_name, ' ', dosage_amount, ' for patient ', p.patient_name),
+    mo.order_id,
+    CONCAT(mo.start_date, ' ', mo.scheduled_time)::TIMESTAMP,
+    CONCAT('Medication due: ', m.medication_name, ' ', mo.dosage_amount, ' for patient ', p.patient_name),
     false
   FROM medication_orders mo
   JOIN medications m ON m.medication_id = mo.medication_id
