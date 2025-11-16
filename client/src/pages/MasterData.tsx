@@ -247,7 +247,6 @@ export default function MasterData() {
     <div>
       <AdminHeader
         notificationCount={0}
-        adminName={admin?.full_name || "Admin"}
         onNotificationClick={() => {}}
       />
       
