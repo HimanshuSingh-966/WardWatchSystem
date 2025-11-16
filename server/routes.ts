@@ -244,13 +244,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             patient_name: originalPatient.patient_name,
             age: originalPatient.age,
             gender: originalPatient.gender,
-            contact_number: originalPatient.contact_number,
-            address: originalPatient.address,
+            contact_number: originalPatient.contact_number || undefined,
+            address: originalPatient.address || undefined,
             bed_number: originalPatient.bed_number,
             ward: originalPatient.ward,
             diagnosis: originalPatient.diagnosis,
-            admission_date: originalPatient.admission_date,
-            emergency_contact: originalPatient.emergency_contact,
+            admission_date: originalPatient.admission_date.toISOString().split('T')[0],
+            emergency_contact: originalPatient.emergency_contact || undefined,
           });
           
           if (originalDoctor) {
@@ -918,6 +918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/notifications/pending", authMiddleware, async (req: AuthRequest, res) => {
     try {
+      const { type } = req.query; // Filter by treatment type: 'medication', 'procedure', 'investigation', or undefined for all
       const now = new Date();
       const lookAheadMinutes = 15; // Look ahead 15 minutes
       const lookAheadTime = new Date(now.getTime() + lookAheadMinutes * 60000);
@@ -959,100 +960,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const notifications: any[] = [];
 
-      // Check medication orders
-      medicationOrders.forEach(order => {
-        if (!order.is_completed) {
-          const scheduledDateTime = createDateTimeFromTime(order.scheduled_time);
-          
-          // Include if overdue OR within look-ahead window
-          if (scheduledDateTime < now || scheduledDateTime <= lookAheadTime) {
-            const patient = patientMap.get(order.patient_id);
-            const medication = medicationMap.get(order.medication_id);
-            if (patient && medication) {
-              const isOverdue = scheduledDateTime < now;
-              notifications.push({
-                id: order.order_id,
-                treatmentType: 'medication',
-                message: `${medication.medication_name}${order.dosage_amount ? ` - ${order.dosage_amount}` : ''} ${isOverdue ? 'overdue' : 'due'} for ${patient.patient_name}`,
-                patientName: patient.patient_name,
-                patientId: patient.patient_id,
-                ipdNumber: patient.ipd_number,
-                bedNumber: patient.bed_number,
-                scheduledTime: order.scheduled_time,
-                scheduledDateTime,
-                priority: order.priority,
-                isOverdue,
-                treatmentName: medication.medication_name,
-                details: order.dosage_amount || '',
-              });
+      // Check medication orders (if no filter or filter is 'medication')
+      if (!type || type === 'medication') {
+        medicationOrders.forEach(order => {
+          if (!order.is_completed) {
+            const scheduledDateTime = createDateTimeFromTime(order.scheduled_time);
+            
+            // Include if overdue OR within look-ahead window
+            if (scheduledDateTime < now || scheduledDateTime <= lookAheadTime) {
+              const patient = patientMap.get(order.patient_id);
+              const medication = medicationMap.get(order.medication_id);
+              if (patient && medication) {
+                const isOverdue = scheduledDateTime < now;
+                notifications.push({
+                  id: order.order_id,
+                  treatmentType: 'medication',
+                  message: `${medication.medication_name}${order.dosage_amount ? ` - ${order.dosage_amount}` : ''} ${isOverdue ? 'overdue' : 'due'} for ${patient.patient_name}`,
+                  patientName: patient.patient_name,
+                  patientId: patient.patient_id,
+                  ipdNumber: patient.ipd_number,
+                  bedNumber: patient.bed_number,
+                  scheduledTime: order.scheduled_time,
+                  scheduledDateTime,
+                  priority: order.priority,
+                  isOverdue,
+                  treatmentName: medication.medication_name,
+                  details: order.dosage_amount || '',
+                });
+              }
             }
           }
-        }
-      });
+        });
+      }
 
-      // Check procedure orders
-      procedureOrders.forEach(order => {
-        if (!order.is_completed) {
-          const scheduledDateTime = new Date(order.scheduled_time);
-          
-          // Include if overdue OR within look-ahead window
-          if (scheduledDateTime < now || scheduledDateTime <= lookAheadTime) {
-            const patient = patientMap.get(order.patient_id);
-            const procedure = procedureMap.get(order.procedure_id);
-            if (patient && procedure) {
-              const isOverdue = scheduledDateTime < now;
-              const timeString = scheduledDateTime.toTimeString().slice(0, 5);
-              notifications.push({
-                id: order.order_id,
-                treatmentType: 'procedure',
-                message: `${procedure.procedure_name} ${isOverdue ? 'overdue' : 'due'} for ${patient.patient_name}`,
-                patientName: patient.patient_name,
-                patientId: patient.patient_id,
-                ipdNumber: patient.ipd_number,
-                bedNumber: patient.bed_number,
-                scheduledTime: timeString,
-                scheduledDateTime,
-                priority: order.priority,
-                isOverdue,
-                treatmentName: procedure.procedure_name,
-                details: '',
-              });
+      // Check procedure orders (if no filter or filter is 'procedure')
+      if (!type || type === 'procedure') {
+        procedureOrders.forEach(order => {
+          if (!order.is_completed) {
+            const scheduledDateTime = new Date(order.scheduled_time);
+            
+            // Include if overdue OR within look-ahead window
+            if (scheduledDateTime < now || scheduledDateTime <= lookAheadTime) {
+              const patient = patientMap.get(order.patient_id);
+              const procedure = procedureMap.get(order.procedure_id);
+              if (patient && procedure) {
+                const isOverdue = scheduledDateTime < now;
+                const timeString = scheduledDateTime.toTimeString().slice(0, 5);
+                notifications.push({
+                  id: order.order_id,
+                  treatmentType: 'procedure',
+                  message: `${procedure.procedure_name} ${isOverdue ? 'overdue' : 'due'} for ${patient.patient_name}`,
+                  patientName: patient.patient_name,
+                  patientId: patient.patient_id,
+                  ipdNumber: patient.ipd_number,
+                  bedNumber: patient.bed_number,
+                  scheduledTime: timeString,
+                  scheduledDateTime,
+                  priority: order.priority,
+                  isOverdue,
+                  treatmentName: procedure.procedure_name,
+                  details: '',
+                });
+              }
             }
           }
-        }
-      });
+        });
+      }
 
-      // Check investigation orders
-      investigationOrders.forEach(order => {
-        if (!order.is_completed) {
-          const scheduledDateTime = new Date(order.scheduled_time);
-          
-          // Include if overdue OR within look-ahead window
-          if (scheduledDateTime < now || scheduledDateTime <= lookAheadTime) {
-            const patient = patientMap.get(order.patient_id);
-            const investigation = investigationMap.get(order.investigation_id);
-            if (patient && investigation) {
-              const isOverdue = scheduledDateTime < now;
-              const timeString = scheduledDateTime.toTimeString().slice(0, 5);
-              notifications.push({
-                id: order.order_id,
-                treatmentType: 'investigation',
-                message: `${investigation.investigation_name} ${isOverdue ? 'overdue' : 'due'} for ${patient.patient_name}`,
-                patientName: patient.patient_name,
-                patientId: patient.patient_id,
-                ipdNumber: patient.ipd_number,
-                bedNumber: patient.bed_number,
-                scheduledTime: timeString,
-                scheduledDateTime,
-                priority: order.priority,
-                isOverdue,
-                treatmentName: investigation.investigation_name,
-                details: '',
-              });
+      // Check investigation orders (if no filter or filter is 'investigation')
+      if (!type || type === 'investigation') {
+        investigationOrders.forEach(order => {
+          if (!order.is_completed) {
+            const scheduledDateTime = new Date(order.scheduled_time);
+            
+            // Include if overdue OR within look-ahead window
+            if (scheduledDateTime < now || scheduledDateTime <= lookAheadTime) {
+              const patient = patientMap.get(order.patient_id);
+              const investigation = investigationMap.get(order.investigation_id);
+              if (patient && investigation) {
+                const isOverdue = scheduledDateTime < now;
+                const timeString = scheduledDateTime.toTimeString().slice(0, 5);
+                notifications.push({
+                  id: order.order_id,
+                  treatmentType: 'investigation',
+                  message: `${investigation.investigation_name} ${isOverdue ? 'overdue' : 'due'} for ${patient.patient_name}`,
+                  patientName: patient.patient_name,
+                  patientId: patient.patient_id,
+                  ipdNumber: patient.ipd_number,
+                  bedNumber: patient.bed_number,
+                  scheduledTime: timeString,
+                  scheduledDateTime,
+                  priority: order.priority,
+                  isOverdue,
+                  treatmentName: investigation.investigation_name,
+                  details: '',
+                });
+              }
             }
           }
-        }
-      });
+        });
+      }
 
       // Sort by overdue status, then scheduled time, then priority
       notifications.sort((a, b) => {
@@ -1064,8 +1071,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (timeDiff !== 0) return timeDiff;
         
         // Finally by priority
-        const priorityOrder = { High: 0, Medium: 1, Low: 2 };
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
+        const priorityOrder: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
+        return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
       });
 
       // Remove scheduledDateTime before sending (not needed in response)
