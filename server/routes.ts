@@ -928,7 +928,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, {} as Record<string, any>);
 
-      res.json(Object.values(grouped));
+      // Sort by time first, then by patient name within same time
+      const sortedTimeline = Object.values(grouped).sort((a: any, b: any) => {
+        // Compare times first
+        if (a.time !== b.time) {
+          return a.time.localeCompare(b.time);
+        }
+        // If same time, sort by patient name
+        return a.patient.name.localeCompare(b.patient.name);
+      });
+
+      res.json(sortedTimeline);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
