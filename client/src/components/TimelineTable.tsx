@@ -47,6 +47,17 @@ const priorityColors = {
   Low: 'border-l-green-500',
 };
 
+const patientColors = [
+  'bg-blue-50 dark:bg-blue-950/20',
+  'bg-purple-50 dark:bg-purple-950/20',
+  'bg-pink-50 dark:bg-pink-950/20',
+  'bg-orange-50 dark:bg-orange-950/20',
+  'bg-teal-50 dark:bg-teal-950/20',
+  'bg-indigo-50 dark:bg-indigo-950/20',
+  'bg-rose-50 dark:bg-rose-950/20',
+  'bg-cyan-50 dark:bg-cyan-950/20',
+];
+
 export default function TimelineTable({
   data,
   onAddTreatment,
@@ -54,6 +65,11 @@ export default function TimelineTable({
   onDeleteTreatment,
   onToggleComplete,
 }: TimelineTableProps) {
+  const uniquePatients = Array.from(new Set(data.map(row => row.patient.ipdNumber)));
+  const patientColorMap = new Map(
+    uniquePatients.map((ipdNo, index) => [ipdNo, patientColors[index % patientColors.length]])
+  );
+
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       <Table>
@@ -72,10 +88,14 @@ export default function TimelineTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((row, rowIndex) => (
+          {data.map((row, rowIndex) => {
+            const allCompleted = row.treatments.length > 0 && row.treatments.every(t => t.isCompleted);
+            const patientBgColor = patientColorMap.get(row.patient.ipdNumber) || patientColors[0];
+            
+            return (
             <TableRow 
               key={rowIndex}
-              className={rowIndex > 0 && data[rowIndex - 1].time !== row.time ? 'border-t-2 border-t-border' : ''}
+              className={`${allCompleted ? 'bg-green-50 dark:bg-green-950/30' : patientBgColor} ${rowIndex > 0 && data[rowIndex - 1].time !== row.time ? 'border-t-2 border-t-border' : ''}`}
             >
               <TableCell className="font-semibold font-mono text-sm">{row.time}</TableCell>
               <TableCell className="font-mono text-sm">{row.patient.ipdNumber}</TableCell>
@@ -151,7 +171,8 @@ export default function TimelineTable({
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </div>
