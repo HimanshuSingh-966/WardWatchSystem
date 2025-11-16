@@ -8,7 +8,9 @@ import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
 import DashboardClock from "@/components/DashboardClock";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Plus, Calendar } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,6 +21,7 @@ export default function OverviewPage() {
   const [showBulletinBoard, setShowBulletinBoard] = useState(true);
   const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
   const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     if (!isLoading && !admin) {
@@ -32,9 +35,13 @@ export default function OverviewPage() {
   }, [admin, isLoading, setLocation]);
 
   const { data: timelineData = [], isLoading: timelineLoading, isError: timelineError } = useQuery({
-    queryKey: ['/api/timeline'],
+    queryKey: ['/api/timeline', selectedDate],
     queryFn: async () => {
-      const res = await fetch('/api/timeline', {
+      const params = new URLSearchParams();
+      if (selectedDate) {
+        params.append('date', selectedDate);
+      }
+      const res = await fetch(`/api/timeline?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
       if (!res.ok) throw new Error('Failed to fetch timeline');
@@ -83,6 +90,7 @@ export default function OverviewPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/treatment-history/all'] });
       toast({
         title: "Treatment completed",
         description: "The treatment has been marked as complete.",
@@ -114,6 +122,7 @@ export default function OverviewPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/treatment-history/all'] });
       toast({
         title: "Treatment deleted",
         description: "The treatment has been removed.",
@@ -162,15 +171,27 @@ export default function OverviewPage() {
             <DashboardClock />
             
             <div className="mt-8">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-6 gap-4">
                 <h2 className="text-2xl font-semibold text-foreground">Treatment Timeline</h2>
-                <Button 
-                  onClick={() => setShowAddTreatmentModal(true)}
-                  data-testid="button-add-treatment"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Treatment
-                </Button>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-40"
+                      data-testid="input-date"
+                    />
+                  </div>
+                  <Button 
+                    onClick={() => setShowAddTreatmentModal(true)}
+                    data-testid="button-add-treatment"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Treatment
+                  </Button>
+                </div>
               </div>
               {timelineLoading ? (
                 <div className="text-center py-12 text-muted-foreground">Loading timeline...</div>

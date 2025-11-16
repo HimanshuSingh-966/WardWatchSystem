@@ -65,7 +65,9 @@ export default function AddTreatmentModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/medication-orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/treatment-history/all'] });
       toast({ title: "Success", description: "Medication order created successfully" });
       onClose();
     },
@@ -80,7 +82,9 @@ export default function AddTreatmentModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/procedure-orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/treatment-history/all'] });
       toast({ title: "Success", description: "Procedure order created successfully" });
       onClose();
     },
@@ -95,7 +99,9 @@ export default function AddTreatmentModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/investigation-orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/treatment-history/all'] });
       toast({ title: "Success", description: "Investigation order created successfully" });
       onClose();
     },
