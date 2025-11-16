@@ -251,3 +251,99 @@ CREATE TRIGGER update_procedure_orders_updated_at BEFORE UPDATE ON procedure_ord
 CREATE TRIGGER update_investigation_orders_updated_at BEFORE UPDATE ON investigation_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_nursing_notes_updated_at BEFORE UPDATE ON nursing_notes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_patient_staff_assignments_updated_at BEFORE UPDATE ON patient_staff_assignments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Treatment History Triggers (automatically save completed treatments to history)
+CREATE OR REPLACE FUNCTION save_medication_to_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_completed = true AND (OLD.is_completed = false OR OLD.is_completed IS NULL) THEN
+        INSERT INTO treatment_history (
+            patient_id,
+            treatment_type,
+            order_id,
+            treatment_name,
+            scheduled_time,
+            completed_at,
+            completed_by,
+            notes
+        )
+        SELECT 
+            NEW.patient_id,
+            'medication',
+            NEW.order_id,
+            CONCAT(m.medication_name, ' ', COALESCE(NEW.dosage_amount, m.dosage), ' ', COALESCE(r.route_name, '')),
+            CONCAT(NEW.start_date, ' ', NEW.scheduled_time)::TIMESTAMP,
+            NEW.completed_at,
+            NEW.completed_by,
+            NEW.notes
+        FROM medications m
+        LEFT JOIN routes_of_administration r ON r.route_id = NEW.route_id
+        WHERE m.medication_id = NEW.medication_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION save_procedure_to_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_completed = true AND (OLD.is_completed = false OR OLD.is_completed IS NULL) THEN
+        INSERT INTO treatment_history (
+            patient_id,
+            treatment_type,
+            order_id,
+            treatment_name,
+            scheduled_time,
+            completed_at,
+            completed_by,
+            notes
+        )
+        SELECT 
+            NEW.patient_id,
+            'procedure',
+            NEW.order_id,
+            p.procedure_name,
+            NEW.scheduled_time,
+            NEW.completed_at,
+            NEW.completed_by,
+            NEW.notes
+        FROM procedures p
+        WHERE p.procedure_id = NEW.procedure_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION save_investigation_to_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_completed = true AND (OLD.is_completed = false OR OLD.is_completed IS NULL) THEN
+        INSERT INTO treatment_history (
+            patient_id,
+            treatment_type,
+            order_id,
+            treatment_name,
+            scheduled_time,
+            completed_at,
+            completed_by,
+            notes
+        )
+        SELECT 
+            NEW.patient_id,
+            'investigation',
+            NEW.order_id,
+            CONCAT(i.investigation_name, COALESCE(' - Result: ' || NEW.result_value, '')),
+            NEW.scheduled_time,
+            NEW.completed_at,
+            NEW.completed_by,
+            NEW.notes
+        FROM investigations i
+        WHERE i.investigation_id = NEW.investigation_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER medication_order_completion AFTER UPDATE ON medication_orders FOR EACH ROW EXECUTE FUNCTION save_medication_to_history();
+CREATE TRIGGER procedure_order_completion AFTER UPDATE ON procedure_orders FOR EACH ROW EXECUTE FUNCTION save_procedure_to_history();
+CREATE TRIGGER investigation_order_completion AFTER UPDATE ON investigation_orders FOR EACH ROW EXECUTE FUNCTION save_investigation_to_history();
