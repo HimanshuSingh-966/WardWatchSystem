@@ -7,6 +7,7 @@ import { useLocation, Link } from "wouter";
 import AdminHeader from "@/components/AdminHeader";
 import NursingNotesTable, { NursingNote } from "@/components/NursingNotesTable";
 import AddNursingNoteModal from "@/components/AddNursingNoteModal";
+import EditNursingNoteModal from "@/components/EditNursingNoteModal";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft } from "lucide-react";
 import type { Patient as BackendPatient, NursingNote as BackendNursingNote, Staff } from "@shared/schema";
@@ -16,6 +17,8 @@ export default function NursingNotesPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
+  const [showEditNoteModal, setShowEditNoteModal] = useState(false);
+  const [editingNote, setEditingNote] = useState<NursingNote | null>(null);
 
   useEffect(() => {
     if (!isLoading && !admin) {
@@ -105,6 +108,21 @@ export default function NursingNotesPage() {
     }
   });
 
+  const updateNursingNoteMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const result = await apiRequest(`/api/nursing-notes/${id}`, 'PATCH', data);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/nursing-notes'] });
+      toast({ title: "Success", description: "Nursing note updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      throw error;
+    }
+  });
+
   const deleteNursingNoteMutation = useMutation({
     mutationFn: (noteId: string) => apiRequest(`/api/nursing-notes/${noteId}`, 'DELETE'),
     onSuccess: () => {
@@ -149,7 +167,13 @@ export default function NursingNotesPage() {
           ) : (
             <NursingNotesTable
               notes={nursingNotes}
-              onEdit={(id) => console.log('Edit note:', id)}
+              onEdit={(id) => {
+                const note = nursingNotes.find(n => n.id === id);
+                if (note) {
+                  setEditingNote(note);
+                  setShowEditNoteModal(true);
+                }
+              }}
               onDelete={(id) => deleteNursingNoteMutation.mutate(id)}
             />
           )}
@@ -160,6 +184,21 @@ export default function NursingNotesPage() {
         open={showAddNoteModal}
         onClose={() => setShowAddNoteModal(false)}
         onSubmit={(data) => addNursingNoteMutation.mutate(data)}
+        patients={patients}
+        staff={staffList}
+        isLoadingData={staffLoading}
+      />
+      
+      <EditNursingNoteModal
+        open={showEditNoteModal}
+        onClose={() => {
+          setShowEditNoteModal(false);
+          setEditingNote(null);
+        }}
+        onSubmit={async (id, data) => {
+          await updateNursingNoteMutation.mutateAsync({ id, data });
+        }}
+        note={editingNote}
         patients={patients}
         staff={staffList}
         isLoadingData={staffLoading}

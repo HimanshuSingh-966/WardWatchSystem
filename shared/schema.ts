@@ -206,8 +206,21 @@ export const insertMedicationOrderSchema = z.object({
   created_by: z.string().uuid().optional(),
 });
 
+export const updateMedicationOrderSchema = z.object({
+  medication_id: z.string().uuid().optional(),
+  route_id: z.string().uuid().optional(),
+  scheduled_time: z.string().optional(),
+  frequency: z.string().optional(),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
+  dosage_amount: z.string().optional(),
+  priority: z.enum(['High', 'Medium', 'Low']).optional(),
+  notes: z.string().optional(),
+});
+
 export type MedicationOrder = z.infer<typeof medicationOrderSchema>;
 export type InsertMedicationOrder = z.infer<typeof insertMedicationOrderSchema>;
+export type UpdateMedicationOrder = z.infer<typeof updateMedicationOrderSchema>;
 
 // Procedure Orders
 export const procedureOrderSchema = z.object({
@@ -235,8 +248,16 @@ export const insertProcedureOrderSchema = z.object({
   created_by: z.string().uuid().optional(),
 });
 
+export const updateProcedureOrderSchema = z.object({
+  procedure_id: z.string().uuid().optional(),
+  scheduled_time: z.string().optional(),
+  priority: z.enum(['High', 'Medium', 'Low']).optional(),
+  notes: z.string().optional(),
+});
+
 export type ProcedureOrder = z.infer<typeof procedureOrderSchema>;
 export type InsertProcedureOrder = z.infer<typeof insertProcedureOrderSchema>;
+export type UpdateProcedureOrder = z.infer<typeof updateProcedureOrderSchema>;
 
 // Investigation Orders
 export const investigationOrderSchema = z.object({
@@ -266,8 +287,17 @@ export const insertInvestigationOrderSchema = z.object({
   created_by: z.string().uuid().optional(),
 });
 
+export const updateInvestigationOrderSchema = z.object({
+  investigation_id: z.string().uuid().optional(),
+  scheduled_time: z.string().optional(),
+  priority: z.enum(['High', 'Medium', 'Low']).optional(),
+  result_value: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 export type InvestigationOrder = z.infer<typeof investigationOrderSchema>;
 export type InsertInvestigationOrder = z.infer<typeof insertInvestigationOrderSchema>;
+export type UpdateInvestigationOrder = z.infer<typeof updateInvestigationOrderSchema>;
 
 // Nursing Notes
 export const nursingNoteSchema = z.object({
@@ -370,6 +400,34 @@ export const insertPatientStaffAssignmentSchema = z.object({
 
 export type PatientStaffAssignment = z.infer<typeof patientStaffAssignmentSchema>;
 export type InsertPatientStaffAssignment = z.infer<typeof insertPatientStaffAssignmentSchema>;
+
+// Nursing Process
+export const nursingProcessSchema = z.object({
+  process_id: z.string().uuid(),
+  patient_id: z.string().uuid(),
+  sign_symptoms: z.string().nullable(),
+  nurse_diagnosis: z.string().nullable(),
+  intervention: z.string().nullable(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+
+export const insertNursingProcessSchema = z.object({
+  patient_id: z.string().uuid(),
+  sign_symptoms: z.string().optional(),
+  nurse_diagnosis: z.string().optional(),
+  intervention: z.string().optional(),
+});
+
+export const updateNursingProcessSchema = z.object({
+  sign_symptoms: z.string().optional(),
+  nurse_diagnosis: z.string().optional(),
+  intervention: z.string().optional(),
+});
+
+export type NursingProcess = z.infer<typeof nursingProcessSchema>;
+export type InsertNursingProcess = z.infer<typeof insertNursingProcessSchema>;
+export type UpdateNursingProcess = z.infer<typeof updateNursingProcessSchema>;
 
 // Extended Patient Details (with staff assignments and related data)
 export const patientDetailsSchema = patientSchema.extend({

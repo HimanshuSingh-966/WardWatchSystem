@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import AdminHeader from "@/components/AdminHeader";
 import TimelineTable from "@/components/TimelineTable";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
+import EditTreatmentModal from "@/components/EditTreatmentModal";
 import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -16,8 +17,10 @@ export default function MedicationsPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
+  const [showEditTreatmentModal, setShowEditTreatmentModal] = useState(false);
   const [showBulletinBoard, setShowBulletinBoard] = useState(true);
   const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
+  const [editingOrder, setEditingOrder] = useState<any>(null);
 
   useEffect(() => {
     if (!isLoading && !admin) {
@@ -117,12 +120,55 @@ export default function MedicationsPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest('PATCH', `/api/medication-orders/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending', 'medication'] });
+      toast({
+        title: "Success",
+        description: "Medication order updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    },
+  });
+
   const handleDeleteTreatment = (id: string, type: 'medication' | 'procedure' | 'investigation') => {
     deleteMutation.mutate(id);
   };
 
   const handleToggleComplete = (id: string, type: 'medication' | 'procedure' | 'investigation') => {
     completeMutation.mutate(id);
+  };
+
+  const handleEditTreatment = (id: string) => {
+    const allMedications = timelineData.flatMap((row: any) => 
+      row.treatments.filter((t: any) => t.type === 'medication')
+    );
+    const medication = allMedications.find((m: any) => m.id === id);
+    if (medication) {
+      setEditingOrder({
+        order_id: medication.id,
+        type: 'medication',
+        medication_id: medication.treatmentId,
+        route_id: medication.routeId,
+        scheduled_time: medication.time,
+        frequency: medication.frequency,
+        dosage_amount: medication.dosage,
+        priority: medication.priority,
+        notes: medication.notes,
+      });
+      setShowEditTreatmentModal(true);
+    }
   };
 
   return (
@@ -163,7 +209,7 @@ export default function MedicationsPage() {
                 treatments: row.treatments.filter((t: any) => t.type === 'medication')
               })).filter((row: any) => row.treatments.length > 0)}
               onAddTreatment={handleAddTreatment}
-              onEditTreatment={(id) => console.log('Edit medication:', id)}
+              onEditTreatment={handleEditTreatment}
               onDeleteTreatment={handleDeleteTreatment}
               onToggleComplete={handleToggleComplete}
             />
@@ -176,6 +222,18 @@ export default function MedicationsPage() {
         onClose={() => setShowAddTreatmentModal(false)}
         defaultTime={modalDefaults.time}
         defaultPatient={modalDefaults.patient}
+      />
+      
+      <EditTreatmentModal
+        open={showEditTreatmentModal}
+        onClose={() => {
+          setShowEditTreatmentModal(false);
+          setEditingOrder(null);
+        }}
+        onSubmit={async (id, data) => {
+          await updateMutation.mutateAsync({ id, data });
+        }}
+        order={editingOrder}
       />
     </div>
   );

@@ -15,7 +15,8 @@ import type {
   VitalSign, InsertVitalSign,
   Route, InsertRoute,
   PatientStaffAssignment, InsertPatientStaffAssignment,
-  TreatmentHistory
+  TreatmentHistory,
+  NursingProcess, InsertNursingProcess
 } from "@shared/schema";
 
 export interface IStorage {
@@ -114,11 +115,20 @@ export interface IStorage {
 
   // Vital Signs methods
   getVitalSigns(patientId: string): Promise<VitalSign[]>;
+  getAllVitalSigns(): Promise<VitalSign[]>;
   createVitalSign(vital: InsertVitalSign): Promise<VitalSign>;
 
   // Treatment History methods
   getTreatmentHistory(patientId: string): Promise<TreatmentHistory[]>;
   getAllPatientsWithHistory(): Promise<any[]>;
+
+  // Nursing Process methods
+  getNursingProcesses(): Promise<NursingProcess[]>;
+  getNursingProcess(id: string): Promise<NursingProcess | null>;
+  getNursingProcessByPatient(patientId: string): Promise<NursingProcess | null>;
+  createNursingProcess(process: InsertNursingProcess): Promise<NursingProcess>;
+  updateNursingProcess(id: string, process: Partial<InsertNursingProcess>): Promise<NursingProcess>;
+  deleteNursingProcess(id: string): Promise<void>;
 }
 
 export class SupabaseStorage implements IStorage {
@@ -917,6 +927,16 @@ export class SupabaseStorage implements IStorage {
     return data as VitalSign[];
   }
 
+  async getAllVitalSigns(): Promise<VitalSign[]> {
+    const { data, error } = await supabase
+      .from('vital_signs')
+      .select('*')
+      .order('recorded_at', { ascending: false });
+    
+    if (error) throw new Error(error.message);
+    return data as VitalSign[];
+  }
+
   async createVitalSign(vital: InsertVitalSign): Promise<VitalSign> {
     const { data, error } = await supabase
       .from('vital_signs')
@@ -965,6 +985,71 @@ export class SupabaseStorage implements IStorage {
     );
     
     return patientsWithHistory;
+  }
+
+  // Nursing Process methods
+  async getNursingProcesses(): Promise<NursingProcess[]> {
+    const { data, error } = await supabase
+      .from('nursing_process')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw new Error(error.message);
+    return data as NursingProcess[];
+  }
+
+  async getNursingProcess(id: string): Promise<NursingProcess | null> {
+    const { data, error } = await supabase
+      .from('nursing_process')
+      .select('*')
+      .eq('process_id', id)
+      .single();
+    
+    if (error) return null;
+    return data as NursingProcess;
+  }
+
+  async getNursingProcessByPatient(patientId: string): Promise<NursingProcess | null> {
+    const { data, error } = await supabase
+      .from('nursing_process')
+      .select('*')
+      .eq('patient_id', patientId)
+      .single();
+    
+    if (error) return null;
+    return data as NursingProcess;
+  }
+
+  async createNursingProcess(process: InsertNursingProcess): Promise<NursingProcess> {
+    const { data, error } = await supabase
+      .from('nursing_process')
+      .insert([process])
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data as NursingProcess;
+  }
+
+  async updateNursingProcess(id: string, process: Partial<InsertNursingProcess>): Promise<NursingProcess> {
+    const { data, error } = await supabase
+      .from('nursing_process')
+      .update(process)
+      .eq('process_id', id)
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data as NursingProcess;
+  }
+
+  async deleteNursingProcess(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('nursing_process')
+      .delete()
+      .eq('process_id', id);
+    
+    if (error) throw new Error(error.message);
   }
 }
 

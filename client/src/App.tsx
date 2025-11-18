@@ -13,6 +13,7 @@ import ProceduresPage from "@/pages/ProceduresPage";
 import InvestigationsPage from "@/pages/InvestigationsPage";
 import PatientsPage from "@/pages/PatientsPage";
 import NursingNotesPage from "@/pages/NursingNotesPage";
+import NursingProcessPage from "@/pages/NursingProcessPage";
 import VitalSignsPage from "@/pages/VitalSignsPage";
 import StaffPage from "@/pages/StaffPage";
 import DepartmentsPage from "@/pages/DepartmentsPage";
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/admin/investigations" component={InvestigationsPage} />
       <Route path="/admin/patients" component={PatientsPage} />
       <Route path="/admin/nursing-notes" component={NursingNotesPage} />
+      <Route path="/admin/nursing-process" component={NursingProcessPage} />
       <Route path="/admin/vital-signs" component={VitalSignsPage} />
       <Route path="/admin/staff" component={StaffPage} />
       <Route path="/admin/departments" component={DepartmentsPage} />

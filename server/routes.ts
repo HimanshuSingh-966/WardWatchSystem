@@ -7,7 +7,9 @@ import {
   insertStaffSchema, insertMedicationSchema, insertProcedureSchema,
   insertInvestigationSchema, insertMedicationOrderSchema,
   insertProcedureOrderSchema, insertInvestigationOrderSchema,
-  insertNursingNoteSchema, insertVitalSignSchema, insertRouteSchema
+  insertNursingNoteSchema, insertVitalSignSchema, insertRouteSchema,
+  insertNursingProcessSchema, updateNursingProcessSchema,
+  updateMedicationOrderSchema, updateProcedureOrderSchema, updateInvestigationOrderSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -548,7 +550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/medication-orders/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertMedicationOrderSchema.partial().parse(req.body);
+      const validatedData = updateMedicationOrderSchema.parse(req.body);
       const order = await storage.updateMedicationOrder(req.params.id, validatedData);
       res.json(order);
     } catch (error: any) {
@@ -604,7 +606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/procedure-orders/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertProcedureOrderSchema.partial().parse(req.body);
+      const validatedData = updateProcedureOrderSchema.parse(req.body);
       const order = await storage.updateProcedureOrder(req.params.id, validatedData);
       res.json(order);
     } catch (error: any) {
@@ -660,7 +662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/investigation-orders/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const validatedData = insertInvestigationOrderSchema.partial().parse(req.body);
+      const validatedData = updateInvestigationOrderSchema.parse(req.body);
       const order = await storage.updateInvestigationOrder(req.params.id, validatedData);
       res.json(order);
     } catch (error: any) {
@@ -746,6 +748,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(vital);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/vital-signs", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const allVitals = await storage.getAllVitalSigns();
+      res.json(allVitals);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== Nursing Process Routes ====================
+  
+  app.get("/api/nursing-process", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const processes = await storage.getNursingProcesses();
+      res.json(processes);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/nursing-process/:id", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const process = await storage.getNursingProcess(req.params.id);
+      if (!process) {
+        return res.status(404).json({ error: "Nursing process not found" });
+      }
+      res.json(process);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/nursing-process", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const validatedData = insertNursingProcessSchema.parse(req.body);
+      
+      const existing = await storage.getNursingProcessByPatient(validatedData.patient_id);
+      if (existing) {
+        return res.status(400).json({ error: "Nursing process already exists for this patient. Use update instead." });
+      }
+      
+      const process = await storage.createNursingProcess(validatedData);
+      res.status(201).json(process);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/nursing-process/:id", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const validatedData = updateNursingProcessSchema.parse(req.body);
+      const process = await storage.updateNursingProcess(req.params.id, validatedData);
+      res.json(process);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/nursing-process/:id", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteNursingProcess(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import AdminHeader from "@/components/AdminHeader";
 import TimelineTable from "@/components/TimelineTable";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
+import EditTreatmentModal from "@/components/EditTreatmentModal";
 import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -16,8 +17,10 @@ export default function ProceduresPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
+  const [showEditTreatmentModal, setShowEditTreatmentModal] = useState(false);
   const [showBulletinBoard, setShowBulletinBoard] = useState(true);
   const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
+  const [editingOrder, setEditingOrder] = useState<any>(null);
 
   useEffect(() => {
     if (!isLoading && !admin) {
@@ -125,6 +128,46 @@ export default function ProceduresPage() {
     completeMutation.mutate(id);
   };
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest('PATCH', `/api/procedure-orders/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending', 'procedure'] });
+      toast({
+        title: "Success",
+        description: "Procedure order updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    },
+  });
+
+  const handleEditTreatment = (id: string) => {
+    const allProcedures = timelineData.flatMap((row: any) => 
+      row.treatments.filter((t: any) => t.type === 'procedure')
+    );
+    const procedure = allProcedures.find((p: any) => p.id === id);
+    if (procedure) {
+      setEditingOrder({
+        order_id: procedure.id,
+        type: 'procedure',
+        procedure_id: procedure.treatmentId,
+        scheduled_time: procedure.scheduledTime,
+        priority: procedure.priority,
+        notes: procedure.notes,
+      });
+      setShowEditTreatmentModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AdminHeader 
@@ -163,7 +206,7 @@ export default function ProceduresPage() {
                 treatments: row.treatments.filter((t: any) => t.type === 'procedure')
               })).filter((row: any) => row.treatments.length > 0)}
               onAddTreatment={handleAddTreatment}
-              onEditTreatment={(id) => console.log('Edit procedure:', id)}
+              onEditTreatment={handleEditTreatment}
               onDeleteTreatment={handleDeleteTreatment}
               onToggleComplete={handleToggleComplete}
             />
@@ -176,6 +219,18 @@ export default function ProceduresPage() {
         onClose={() => setShowAddTreatmentModal(false)}
         defaultTime={modalDefaults.time}
         defaultPatient={modalDefaults.patient}
+      />
+      
+      <EditTreatmentModal
+        open={showEditTreatmentModal}
+        onClose={() => {
+          setShowEditTreatmentModal(false);
+          setEditingOrder(null);
+        }}
+        onSubmit={async (id, data) => {
+          await updateMutation.mutateAsync({ id, data });
+        }}
+        order={editingOrder}
       />
     </div>
   );

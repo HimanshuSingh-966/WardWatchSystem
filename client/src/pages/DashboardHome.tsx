@@ -11,6 +11,7 @@ import {
   FlaskConical, 
   Users, 
   FileText, 
+  Clipboard,
   Activity, 
   UserCog, 
   Building, 
@@ -68,6 +69,13 @@ const sections: DashboardSection[] = [
     icon: FileText,
     path: "/admin/nursing-notes",
     color: "text-indigo-500",
+  },
+  {
+    id: "process",
+    title: "Nursing Process",
+    icon: Clipboard,
+    path: "/admin/nursing-process",
+    color: "text-emerald-500",
   },
   {
     id: "vitals",

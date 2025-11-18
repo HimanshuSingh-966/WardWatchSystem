@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import AdminHeader from "@/components/AdminHeader";
 import TimelineTable from "@/components/TimelineTable";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
+import EditTreatmentModal from "@/components/EditTreatmentModal";
 import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -16,8 +17,10 @@ export default function InvestigationsPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
+  const [showEditTreatmentModal, setShowEditTreatmentModal] = useState(false);
   const [showBulletinBoard, setShowBulletinBoard] = useState(true);
   const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
+  const [editingOrder, setEditingOrder] = useState<any>(null);
 
   useEffect(() => {
     if (!isLoading && !admin) {
@@ -125,6 +128,47 @@ export default function InvestigationsPage() {
     completeMutation.mutate(id);
   };
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest('PATCH', `/api/investigation-orders/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending', 'investigation'] });
+      toast({
+        title: "Success",
+        description: "Investigation order updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    },
+  });
+
+  const handleEditTreatment = (id: string) => {
+    const allInvestigations = timelineData.flatMap((row: any) => 
+      row.treatments.filter((t: any) => t.type === 'investigation')
+    );
+    const investigation = allInvestigations.find((inv: any) => inv.id === id);
+    if (investigation) {
+      setEditingOrder({
+        order_id: investigation.id,
+        type: 'investigation',
+        investigation_id: investigation.treatmentId,
+        scheduled_time: investigation.scheduledTime,
+        priority: investigation.priority,
+        notes: investigation.notes,
+        result_value: investigation.resultValue,
+      });
+      setShowEditTreatmentModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AdminHeader 
@@ -163,7 +207,7 @@ export default function InvestigationsPage() {
                 treatments: row.treatments.filter((t: any) => t.type === 'investigation')
               })).filter((row: any) => row.treatments.length > 0)}
               onAddTreatment={handleAddTreatment}
-              onEditTreatment={(id) => console.log('Edit investigation:', id)}
+              onEditTreatment={handleEditTreatment}
               onDeleteTreatment={handleDeleteTreatment}
               onToggleComplete={handleToggleComplete}
             />
@@ -176,6 +220,18 @@ export default function InvestigationsPage() {
         onClose={() => setShowAddTreatmentModal(false)}
         defaultTime={modalDefaults.time}
         defaultPatient={modalDefaults.patient}
+      />
+      
+      <EditTreatmentModal
+        open={showEditTreatmentModal}
+        onClose={() => {
+          setShowEditTreatmentModal(false);
+          setEditingOrder(null);
+        }}
+        onSubmit={async (id, data) => {
+          await updateMutation.mutateAsync({ id, data });
+        }}
+        order={editingOrder}
       />
     </div>
   );
