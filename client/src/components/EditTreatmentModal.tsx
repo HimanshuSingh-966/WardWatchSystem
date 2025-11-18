@@ -210,10 +210,9 @@ export default function EditTreatmentModal({
                     <Label htmlFor="route">Route</Label>
                     <Select value={selectedRoute} onValueChange={setSelectedRoute}>
                       <SelectTrigger data-testid="select-route">
-                        <SelectValue placeholder="Select route" />
+                        <SelectValue placeholder="Select route (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
                         {routes.map((route) => (
                           <SelectItem key={route.route_id} value={route.route_id}>
                             {route.route_name}

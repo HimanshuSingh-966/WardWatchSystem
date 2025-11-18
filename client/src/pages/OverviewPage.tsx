@@ -6,6 +6,7 @@ import AdminHeader from "@/components/AdminHeader";
 import TimelineTable from "@/components/TimelineTable";
 import BulletinBoard, { BulletinItem } from "@/components/BulletinBoard";
 import AddTreatmentModal from "@/components/AddTreatmentModal";
+import EditTreatmentModal from "@/components/EditTreatmentModal";
 import DashboardClock from "@/components/DashboardClock";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,9 @@ export default function OverviewPage() {
   const { toast } = useToast();
   const [showBulletinBoard, setShowBulletinBoard] = useState(true);
   const [showAddTreatmentModal, setShowAddTreatmentModal] = useState(false);
+  const [showEditTreatmentModal, setShowEditTreatmentModal] = useState(false);
   const [modalDefaults, setModalDefaults] = useState<{ time?: string; patient?: string }>({});
+  const [editingOrder, setEditingOrder] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -147,6 +150,75 @@ export default function OverviewPage() {
     deleteTreatmentMutation.mutate({ id: treatmentId, type: treatmentType });
   };
 
+  const updateTreatmentMutation = useMutation({
+    mutationFn: async ({ id, type, data }: { id: string; type: 'medication' | 'procedure' | 'investigation'; data: any }) => {
+      const endpoint = type === 'medication' 
+        ? `/api/medication-orders/${id}`
+        : type === 'procedure'
+        ? `/api/procedure-orders/${id}`
+        : `/api/investigation-orders/${id}`;
+      
+      return apiRequest('PATCH', endpoint, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/pending'] });
+      toast({
+        title: "Treatment updated",
+        description: "The treatment has been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update treatment",
+        variant: "destructive",
+      });
+      throw error;
+    },
+  });
+
+  const handleEditTreatment = (id: string) => {
+    const allTreatments = timelineData.flatMap((row: any) => row.treatments);
+    const treatment = allTreatments.find((t: any) => t.id === id);
+    
+    if (treatment) {
+      if (treatment.type === 'medication') {
+        setEditingOrder({
+          order_id: treatment.id,
+          type: 'medication',
+          medication_id: treatment.treatmentId,
+          route_id: treatment.routeId,
+          scheduled_time: treatment.time,
+          frequency: treatment.frequency,
+          dosage_amount: treatment.dosage,
+          priority: treatment.priority,
+          notes: treatment.notes,
+        });
+      } else if (treatment.type === 'procedure') {
+        setEditingOrder({
+          order_id: treatment.id,
+          type: 'procedure',
+          procedure_id: treatment.treatmentId,
+          scheduled_time: treatment.scheduledTime,
+          priority: treatment.priority,
+          notes: treatment.notes,
+        });
+      } else if (treatment.type === 'investigation') {
+        setEditingOrder({
+          order_id: treatment.id,
+          type: 'investigation',
+          investigation_id: treatment.treatmentId,
+          scheduled_time: treatment.scheduledTime,
+          priority: treatment.priority,
+          notes: treatment.notes,
+          result_value: treatment.resultValue,
+        });
+      }
+      setShowEditTreatmentModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {showBulletinBoard && bulletinItems.length > 0 && (
@@ -207,7 +279,7 @@ export default function OverviewPage() {
                 <TimelineTable
                   data={timelineData}
                   onAddTreatment={handleAddTreatment}
-                  onEditTreatment={(id) => console.log('Edit treatment:', id)}
+                  onEditTreatment={handleEditTreatment}
                   onDeleteTreatment={handleDeleteTreatment}
                   onToggleComplete={handleToggleComplete}
                 />
@@ -226,6 +298,20 @@ export default function OverviewPage() {
         onClose={() => setShowAddTreatmentModal(false)}
         defaultTime={modalDefaults.time}
         defaultPatient={modalDefaults.patient}
+      />
+      
+      <EditTreatmentModal
+        open={showEditTreatmentModal}
+        onClose={() => {
+          setShowEditTreatmentModal(false);
+          setEditingOrder(null);
+        }}
+        onSubmit={async (id, data) => {
+          if (editingOrder) {
+            await updateTreatmentMutation.mutateAsync({ id, type: editingOrder.type, data });
+          }
+        }}
+        order={editingOrder}
       />
     </div>
   );
